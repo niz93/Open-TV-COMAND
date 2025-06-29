@@ -30,5 +30,5 @@ This emulator work over [MKS CANable V1.0](https://github.com/makerbase-mks/CANa
 
 ## Support
 
-For support, email 193nizgmail.com or  [drive2](www.drive2.ru/users/niz/) 
+For support, email 193niz@gmail.com or  [drive2](www.drive2.ru/users/niz/) 
 
