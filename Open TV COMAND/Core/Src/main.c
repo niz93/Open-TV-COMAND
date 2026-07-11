@@ -138,7 +138,8 @@ int main(void) {
 
 	HAL_CAN_Start(&hcan);
 	HAL_CAN_ActivateNotification(&hcan,
-	CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_ERROR | CAN_IT_BUSOFF | CAN_IT_LAST_ERROR_CODE);
+			CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_ERROR | CAN_IT_BUSOFF
+					| CAN_IT_LAST_ERROR_CODE);
 
 	NumTx = 0;
 	TxHeader.DLC = 3;
@@ -162,7 +163,8 @@ int main(void) {
 
 			RxInput = 0;
 			/* TV tuner init BEGIN */
-			if (RxHeader.DLC == 3 && RxData[0] == 0xE0 && RxData[1] == 0x01 && RxData[2] == 0x00) { // Handshake
+			if (RxHeader.DLC == 3 && RxData[0] == 0xE0 && RxData[1] == 0x01
+					&& RxData[2] == 0x00) { // Handshake
 
 				NumTx = 0;
 				TxHeader.DLC = 3;
@@ -171,13 +173,15 @@ int main(void) {
 				TxData[2] = 0x00;
 				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
 					;
-				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
+				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox)
+						== HAL_OK) {
 					HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
 				}
 
 			}
 
-			else if (RxHeader.DLC == 2 && RxData[0] == 0xE1 && RxData[1] == 0x01) { //Video timings data (?)
+			else if (RxHeader.DLC == 2 && RxData[0] == 0xE1
+					&& RxData[1] == 0x01) { //Purpose unknown (?)
 
 				TxHeader.DLC = 7;
 				TxData[0] = 0x10;
@@ -189,7 +193,8 @@ int main(void) {
 				TxData[6] = 0x00;
 				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
 					;
-				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
+				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox)
+						== HAL_OK) {
 					HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
 				}
 
@@ -201,20 +206,23 @@ int main(void) {
 				TxData[3] = 0x00;
 				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
 					;
-				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
+				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox)
+						== HAL_OK) {
 					HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
 				}
 
 			}
 
-			else if (RxHeader.DLC == 2 && RxData[0] == 0xA3 && RxData[1] == 0x00) { //Ping - Pong
+			else if (RxHeader.DLC == 2 && RxData[0] == 0xA3
+					&& RxData[1] == 0x00) { //Ping - Pong
 
 				TxHeader.DLC = 2;
 				TxData[0] = 0xE1;
 				TxData[1] = 0x01;
 				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
 					;
-				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
+				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox)
+						== HAL_OK) {
 					HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
 				}
 
@@ -225,7 +233,8 @@ int main(void) {
 				TxData[0] = ((RxData[0] + 0x01) & 0x0F) + 0xB0;
 				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
 					;
-				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
+				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox)
+						== HAL_OK) {
 					HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
 				}
 			}
@@ -239,26 +248,28 @@ int main(void) {
 				TxData[2] = 0x01;
 				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
 					;
-				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
+				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox)
+						== HAL_OK) {
 					HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
 				}
 
 			}
 
-			if (RxHeader.DLC == 2 && RxData[1] == 0x08) { //Purpose unknown (?)
+			if (RxHeader.DLC == 2 && RxData[1] == 0x08) { //Сontains SW TV tuner Version
 
 				TxHeader.DLC = 7;
 				NumTx = NumTx + 0x01;
 				TxData[0] = (NumTx & 0x0F) + 0x20;
-				TxData[1] = 0x09;
-				TxData[2] = 0x01;
-				TxData[3] = 0x42;
-				TxData[4] = 0x50;
-				TxData[5] = 0x02;
-				TxData[6] = 0x31;
+				TxData[1] = 0x09;						//Purpose unknown (?)
+				TxData[2] = 0x01;						//Purpose unknown (?)
+				TxData[3] = 0x42;						//Purpose unknown (?)
+				TxData[4] = 0x50;						//Purpose unknown (?)
+				TxData[5] = 0x00;						//SW TV tuner Version
+				TxData[6] = 0x01; 						//SW TV tuner Version
 				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
 					;
-				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
+				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox)
+						== HAL_OK) {
 					HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
 				}
 			}
@@ -273,18 +284,19 @@ int main(void) {
 				TxData[3] = 0x00;
 				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
 					;
-				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
+				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox)
+						== HAL_OK) {
 					HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
 				}
 			}
 
-			if (RxHeader.DLC == 2 && RxData[1] == 0x46) { // ASCII tv tuner - comand - instrument cluster
+			if (RxHeader.DLC == 2 && RxData[1] == 0x46) { // ASCII tv tuner - comand - instrument cluster and SW TV tuner Version
 
 				TxHeader.DLC = 8;
 				NumTx = NumTx + 0x01;
 				TxData[0] = (NumTx & 0x0F) + 0x10;
-				TxData[1] = 0x47;
-				TxData[2] = 0x01;
+				TxData[1] = 0x00;						//SW TV tuner Version
+				TxData[2] = 0x01;						//SW TV tuner Version
 				TxData[3] = 0x2B;
 				TxData[4] = 0x49;
 				TxData[5] = 0x4D;
@@ -292,7 +304,8 @@ int main(void) {
 				TxData[7] = 0x00;
 				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
 					;
-				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
+				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox)
+						== HAL_OK) {
 					HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
 				}
 			}
@@ -304,75 +317,93 @@ int main(void) {
 
 				if (RxData[3] == 0x40) { // 0 Key
 					keyboardhid.KEYCODE1 = 0x62;
-					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid, sizeof(keyboardhid));
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
 				}
 
 				if (RxData[3] == 0x41) { // 1 Key
 					keyboardhid.KEYCODE1 = 0x59;
-					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid, sizeof(keyboardhid));
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
 				}
 				if (RxData[3] == 0x42) { // 2 Key
 					keyboardhid.KEYCODE1 = 0x5A;
-					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid, sizeof(keyboardhid));
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
 				}
 				if (RxData[3] == 0x43) { // 3 Key
 					keyboardhid.KEYCODE1 = 0x5B;
-					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid, sizeof(keyboardhid));
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
 				}
 				if (RxData[3] == 0x44) { // 4 Key
 					keyboardhid.KEYCODE1 = 0x5C;
-					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid, sizeof(keyboardhid));
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
 				}
 				if (RxData[3] == 0x45) { // 5 Key
 					keyboardhid.KEYCODE1 = 0x5D;
-					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid, sizeof(keyboardhid));
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
 				}
 				if (RxData[3] == 0x46) { // 6 Key
 					keyboardhid.KEYCODE1 = 0x5E;
-					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid, sizeof(keyboardhid));
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
 				}
 				if (RxData[3] == 0x47) { // 7 Key
 					keyboardhid.KEYCODE1 = 0x5F;
-					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid, sizeof(keyboardhid));
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
 				}
 				if (RxData[3] == 0x48) { // 8 Key
 					keyboardhid.KEYCODE1 = 0x60;
-					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid, sizeof(keyboardhid));
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
 				}
 				if (RxData[3] == 0x49) { // 9 Key
 					keyboardhid.KEYCODE1 = 0x61;
-					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid, sizeof(keyboardhid));
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
 				}
 				if (RxData[3] == 0x50) { // * Key
 					keyboardhid.KEYCODE1 = 0x55;
-					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid, sizeof(keyboardhid));
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
 				}
 				if (RxData[3] == 0x51) { // # Key
 					keyboardhid.KEYCODE1 = 0x63;
-					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid, sizeof(keyboardhid));
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
 				}
 				if (RxData[3] == 0x62) { // Back Key
 					keyboardhid.KEYCODE1 = 0x50;
-					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid, sizeof(keyboardhid));
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
 				}
 
 				if (RxData[3] == 0x63) { // Forward Key
 					keyboardhid.KEYCODE1 = 0x4F;
-					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid, sizeof(keyboardhid));
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
 				}
 				if (RxData[3] == 0x71) { // Press Encoder
 					keyboardhid.KEYCODE1 = 0x54;
-					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid, sizeof(keyboardhid));
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
 				}
 
 				if (RxData[3] == 0x80) { // RET Key
 					keyboardhid.KEYCODE1 = 0x2A;
-					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid, sizeof(keyboardhid));
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
 				}
 
-			} else if (RxHeader.DLC == 5 && RxData[1] == 0x30 && RxData[2] == 0x02) { // Key release
+			} else if (RxHeader.DLC == 5 && RxData[1] == 0x30
+					&& RxData[2] == 0x02) { // Key release
 				keyboardhid.KEYCODE1 = 0x00;
-				USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid, sizeof(keyboardhid));
+				USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+						sizeof(keyboardhid));
 			}
 
 			if (RxHeader.DLC == 5 && RxData[1] == 0x34) { // Encoder rotary
@@ -380,18 +411,38 @@ int main(void) {
 				if (RxData[2] == 0x01) { // + rotary
 
 					keyboardhid.KEYCODE1 = 0x52;
-					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid, sizeof(keyboardhid));
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
 					HAL_Delay(50);
 					keyboardhid.KEYCODE1 = 0x00;
-					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid, sizeof(keyboardhid));
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
 
 				}
 				if (RxData[2] == 0x02) { // - rotary
 					keyboardhid.KEYCODE1 = 0x51;
-					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid, sizeof(keyboardhid));
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
 					HAL_Delay(50);
 					keyboardhid.KEYCODE1 = 0x00;
-					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid, sizeof(keyboardhid));
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
+				}
+
+			}
+
+			if (RxHeader.DLC == 3 && RxData[1] == 0x3A) { // Mute button
+
+				if (RxData[2] == 0x01) { // Mute
+					keyboardhid.KEYCODE1 = 0x00;
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
+
+				}
+				if (RxData[2] == 0x02) { // UNMute
+					keyboardhid.KEYCODE1 = 0x00;
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
 				}
 
 			}
@@ -429,7 +480,8 @@ void SystemClock_Config(void) {
 
 	/** Initializes the CPU, AHB and APB buses clocks
 	 */
-	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1;
+	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
+			| RCC_CLOCKTYPE_PCLK1;
 	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI48;
 	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
 	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
@@ -460,15 +512,15 @@ static void MX_CAN_Init(void) {
 
 	/* USER CODE END CAN_Init 1 */
 	hcan.Instance = CAN;
-	hcan.Init.Prescaler = 32;
+	hcan.Init.Prescaler = 36;
 	hcan.Init.Mode = CAN_MODE_NORMAL;
 	hcan.Init.SyncJumpWidth = CAN_SJW_1TQ;
-	hcan.Init.TimeSeg1 = CAN_BS1_16TQ;
-	hcan.Init.TimeSeg2 = CAN_BS2_1TQ;
+	hcan.Init.TimeSeg1 = CAN_BS1_13TQ;
+	hcan.Init.TimeSeg2 = CAN_BS2_2TQ;
 	hcan.Init.TimeTriggeredMode = DISABLE;
 	hcan.Init.AutoBusOff = ENABLE;
 	hcan.Init.AutoWakeUp = DISABLE;
-	hcan.Init.AutoRetransmission = DISABLE;
+	hcan.Init.AutoRetransmission = ENABLE;
 	hcan.Init.ReceiveFifoLocked = DISABLE;
 	hcan.Init.TransmitFifoPriority = ENABLE;
 	if (HAL_CAN_Init(&hcan) != HAL_OK) {
