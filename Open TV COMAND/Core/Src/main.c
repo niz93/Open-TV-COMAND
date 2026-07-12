@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "usb_device.h"
+#include "usb_hid_keys.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -51,6 +52,7 @@ uint8_t RxData[8] = { 0, };
 uint32_t TxMailbox = 0;
 _Bool RxInput = 0;
 unsigned char NumTx = 0;
+unsigned char NumPress = 0;
 
 /* USER CODE END PV */
 
@@ -161,7 +163,6 @@ int main(void) {
 		/* TV tuner emulator BEGIN */
 		if (RxInput == 1) {
 
-			RxInput = 0;
 			/* TV tuner init BEGIN */
 			if (RxHeader.DLC == 3 && RxData[0] == 0xE0 && RxData[1] == 0x01
 					&& RxData[2] == 0x00) { // Handshake
@@ -274,14 +275,14 @@ int main(void) {
 				}
 			}
 
-			if (RxHeader.DLC == 2 && RxData[1] == 0x32) { //Purpose unknown (?)
+			if (RxHeader.DLC == 2 && RxData[1] == 0x32) { //ASCII in Version
 
 				TxHeader.DLC = 4;
 				NumTx = NumTx + 0x01;
 				TxData[0] = (NumTx & 0x0F) + 0x20;
-				TxData[1] = 0x33;
-				TxData[2] = 0x00;
-				TxData[3] = 0x00;
+				TxData[1] = 's';
+				TxData[2] = 'i';
+				TxData[3] = 's';
 				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
 					;
 				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox)
@@ -297,11 +298,11 @@ int main(void) {
 				TxData[0] = (NumTx & 0x0F) + 0x10;
 				TxData[1] = 0x00;						//SW TV tuner Version
 				TxData[2] = 0x01;						//SW TV tuner Version
-				TxData[3] = 0x2B;
-				TxData[4] = 0x49;
-				TxData[5] = 0x4D;
-				TxData[6] = 0x41;
-				TxData[7] = 0x00;
+				TxData[3] = 's';
+				TxData[4] = 'i';
+				TxData[5] = 's';
+				TxData[6] = 'a';
+				TxData[7] = 's';
 				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
 					;
 				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox)
@@ -315,93 +316,114 @@ int main(void) {
 
 			if (RxHeader.DLC == 5 && RxData[1] == 0x30 && RxData[2] == 0x01) { // Key press
 
+				NumPress = NumPress + 1;
+
 				if (RxData[3] == 0x40) { // 0 Key
-					keyboardhid.KEYCODE1 = 0x62;
+					keyboardhid.KEYCODE1 = KEY_KP0;
 					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
 							sizeof(keyboardhid));
 				}
 
 				if (RxData[3] == 0x41) { // 1 Key
-					keyboardhid.KEYCODE1 = 0x59;
+					keyboardhid.KEYCODE1 = KEY_KP1;
 					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
 							sizeof(keyboardhid));
 				}
 				if (RxData[3] == 0x42) { // 2 Key
-					keyboardhid.KEYCODE1 = 0x5A;
+					keyboardhid.KEYCODE1 = KEY_KP2;
 					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
 							sizeof(keyboardhid));
 				}
 				if (RxData[3] == 0x43) { // 3 Key
-					keyboardhid.KEYCODE1 = 0x5B;
+					keyboardhid.KEYCODE1 = KEY_KP3;
 					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
 							sizeof(keyboardhid));
 				}
 				if (RxData[3] == 0x44) { // 4 Key
-					keyboardhid.KEYCODE1 = 0x5C;
+					keyboardhid.KEYCODE1 = KEY_KP4;
 					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
 							sizeof(keyboardhid));
 				}
 				if (RxData[3] == 0x45) { // 5 Key
-					keyboardhid.KEYCODE1 = 0x5D;
+					keyboardhid.KEYCODE1 = KEY_KP5;
 					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
 							sizeof(keyboardhid));
 				}
 				if (RxData[3] == 0x46) { // 6 Key
-					keyboardhid.KEYCODE1 = 0x5E;
+					keyboardhid.KEYCODE1 = KEY_KP6;
 					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
 							sizeof(keyboardhid));
 				}
 				if (RxData[3] == 0x47) { // 7 Key
-					keyboardhid.KEYCODE1 = 0x5F;
+					keyboardhid.KEYCODE1 = KEY_KP7;
 					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
 							sizeof(keyboardhid));
 				}
 				if (RxData[3] == 0x48) { // 8 Key
-					keyboardhid.KEYCODE1 = 0x60;
+					keyboardhid.KEYCODE1 = KEY_KP8;
 					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
 							sizeof(keyboardhid));
 				}
 				if (RxData[3] == 0x49) { // 9 Key
-					keyboardhid.KEYCODE1 = 0x61;
+					keyboardhid.KEYCODE1 = KEY_KP9;
 					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
 							sizeof(keyboardhid));
 				}
 				if (RxData[3] == 0x50) { // * Key
-					keyboardhid.KEYCODE1 = 0x55;
+					keyboardhid.KEYCODE1 = KEY_KPASTERISK;
 					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
 							sizeof(keyboardhid));
+
+					if (NumPress > 40) {
+						NumPress = 0;
+						TxHeader.DLC = 4;   //Open sound settings
+						NumTx = NumTx + 0x01;
+						TxData[0] = (NumTx & 0x0F) + 0x10;
+						TxData[1] = 0x2D;
+						TxData[2] = 0x01;
+						TxData[3] = 0x01;
+						while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
+							;
+						if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData,
+								&TxMailbox) == HAL_OK) {
+							HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
+						}
+					}
+
 				}
 				if (RxData[3] == 0x51) { // # Key
-					keyboardhid.KEYCODE1 = 0x63;
+					keyboardhid.KEYCODE1 = KEY_KPDOT;
 					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
 							sizeof(keyboardhid));
 				}
 				if (RxData[3] == 0x62) { // Back Key
-					keyboardhid.KEYCODE1 = 0x50;
+					keyboardhid.KEYCODE1 = KEY_LEFT;
 					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
 							sizeof(keyboardhid));
 				}
 
 				if (RxData[3] == 0x63) { // Forward Key
-					keyboardhid.KEYCODE1 = 0x4F;
+					keyboardhid.KEYCODE1 = KEY_RIGHT;
 					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
 							sizeof(keyboardhid));
 				}
 				if (RxData[3] == 0x71) { // Press Encoder
-					keyboardhid.KEYCODE1 = 0x54;
+					keyboardhid.KEYCODE1 = KEY_KPSLASH;
 					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
 							sizeof(keyboardhid));
+
 				}
 
 				if (RxData[3] == 0x80) { // RET Key
-					keyboardhid.KEYCODE1 = 0x2A;
+					keyboardhid.KEYCODE1 = KEY_BACKSPACE;
 					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
 							sizeof(keyboardhid));
 				}
 
 			} else if (RxHeader.DLC == 5 && RxData[1] == 0x30
 					&& RxData[2] == 0x02) { // Key release
-				keyboardhid.KEYCODE1 = 0x00;
+				NumPress = 0;
+				keyboardhid.KEYCODE1 = KEY_NONE;
 				USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
 						sizeof(keyboardhid));
 			}
@@ -410,7 +432,7 @@ int main(void) {
 
 				if (RxData[2] == 0x01) { // + rotary
 
-					keyboardhid.KEYCODE1 = 0x52;
+					keyboardhid.KEYCODE1 = KEY_UP;
 					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
 							sizeof(keyboardhid));
 					HAL_Delay(50);
@@ -420,7 +442,7 @@ int main(void) {
 
 				}
 				if (RxData[2] == 0x02) { // - rotary
-					keyboardhid.KEYCODE1 = 0x51;
+					keyboardhid.KEYCODE1 = KEY_DOWN;
 					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
 							sizeof(keyboardhid));
 					HAL_Delay(50);
@@ -431,15 +453,23 @@ int main(void) {
 
 			}
 
-			if (RxHeader.DLC == 3 && RxData[1] == 0x3A) { // Mute button
+			if (RxHeader.DLC == 3 && RxData[1] == 0x2A) { // State TV mode
 
-				if (RxData[2] == 0x01) { // Mute
+				if (RxData[2] == 0x01) { // Open TV
+					keyboardhid.KEYCODE1 = KEY_F1;
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
+					HAL_Delay(50);
 					keyboardhid.KEYCODE1 = 0x00;
 					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
 							sizeof(keyboardhid));
 
 				}
-				if (RxData[2] == 0x02) { // UNMute
+				if (RxData[2] == 0x02) { // Close TV
+					keyboardhid.KEYCODE1 = KEY_F2;
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
+					HAL_Delay(50);
 					keyboardhid.KEYCODE1 = 0x00;
 					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
 							sizeof(keyboardhid));
@@ -447,7 +477,44 @@ int main(void) {
 
 			}
 
+			if (RxHeader.DLC == 3 && RxData[1] == 0x3A) { // State Mute button
+
+				if (RxData[2] == 0x00) { // UNMute
+					keyboardhid.KEYCODE1 = KEY_F3;
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
+					HAL_Delay(50);
+					keyboardhid.KEYCODE1 = 0x00;
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
+
+				}
+				if (RxData[2] == 0x01) { // Mute
+					keyboardhid.KEYCODE1 = KEY_F4;
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
+					HAL_Delay(50);
+					keyboardhid.KEYCODE1 = 0x00;
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
+				}
+
+			}
+
+			if (RxHeader.DLC == 3 && RxData[1] == 0x36 && RxData[2] == 0x02) { // COMAND Power off
+
+							keyboardhid.KEYCODE1 = KEY_F5;
+							USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+									sizeof(keyboardhid));
+							HAL_Delay(50);
+							keyboardhid.KEYCODE1 = 0x00;
+							USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+									sizeof(keyboardhid));
+
+						}
+
 			/* Comand to HID END */
+			RxInput = 0;
 		}
 
 		/* TV tuner emulator END */
