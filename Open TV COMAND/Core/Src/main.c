@@ -370,12 +370,13 @@ int main(void) {
 							sizeof(keyboardhid));
 				}
 				if (RxData[3] == 0x50) { // * Key
-					keyboardhid.KEYCODE1 = KEY_KPASTERISK;
-					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
-							sizeof(keyboardhid));
 
+					if (NumPress == 1) {
+						keyboardhid.KEYCODE1 = KEY_KPASTERISK;
+						USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+								sizeof(keyboardhid));
+					}
 					if (NumPress > 40) {
-						NumPress = 0;
 						TxHeader.DLC = 4;   //Open sound settings
 						NumTx = NumTx + 0x01;
 						TxData[0] = (NumTx & 0x0F) + 0x10;
@@ -477,6 +478,21 @@ int main(void) {
 
 			}
 
+			if (RxHeader.DLC == 3 && RxData[1] == 0x2C) { // State sound background TV mode
+
+				if (RxData[2] == 0x01) { // TV sound enable
+					keyboardhid.KEYCODE1 = KEY_F1;
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
+					HAL_Delay(50);
+					keyboardhid.KEYCODE1 = 0x00;
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
+
+				}
+
+			}
+
 			if (RxHeader.DLC == 3 && RxData[1] == 0x3A) { // State Mute button
 
 				if (RxData[2] == 0x00) { // UNMute
@@ -503,15 +519,15 @@ int main(void) {
 
 			if (RxHeader.DLC == 3 && RxData[1] == 0x36 && RxData[2] == 0x02) { // COMAND Power off
 
-							keyboardhid.KEYCODE1 = KEY_F5;
-							USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
-									sizeof(keyboardhid));
-							HAL_Delay(50);
-							keyboardhid.KEYCODE1 = 0x00;
-							USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
-									sizeof(keyboardhid));
+				keyboardhid.KEYCODE1 = KEY_F5;
+				USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+						sizeof(keyboardhid));
+				HAL_Delay(50);
+				keyboardhid.KEYCODE1 = 0x00;
+				USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+						sizeof(keyboardhid));
 
-						}
+			}
 
 			/* Comand to HID END */
 			RxInput = 0;
