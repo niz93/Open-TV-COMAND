@@ -51,7 +51,9 @@ This emulator work over [MKS CANable V1.0](https://github.com/makerbase-mks/CANa
 | Power off  | KEY_F5 |  KEY_F5  |
 
 *hex HID code see in Open TV COMAND/Core/Inc/main.h
+
 **Press and hold the button for more than 5 seconds
+
 ***Pressing the TV button and any other
 
 
