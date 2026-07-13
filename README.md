@@ -30,8 +30,8 @@ This emulator work over [MKS CANable V1.0](https://github.com/makerbase-mks/CANa
 | 2 | KEY_DOWN   |  KEY_KP2  |
 | 3 | KEY_KP3    |  KEY_KP3  |
 | 4 | KEY_LEFT   |  KEY_KP4  |
-| 5 | KEY_ENTE   |  KEY_KP5  | toogle key mode |
-| 6 | KEY_RIGH   |  KEY_KP6  |
+| 5 | KEY_ENTER  |  KEY_KP5  | toogle key mode |
+| 6 | KEY_RIGHT  |  KEY_KP6  |
 | 7 | KEY_KP7    |  KEY_KP7  |
 | 8 | KEY_UP     |  KEY_KP8  |
 | 9 | KEY_KP9    |  KEY_KP9  |
