@@ -1,7 +1,7 @@
 
-# Open TV for Comand 2.0 or 2.5
+# Open TV for COMAND 2.0 or 2.5
 
-This emulator TV tuner for Mercedes (Bosch) Comand 2.0 or 2.5
+This emulator TV tuner for Mercedes (Bosch) COMAND 2.0 or 2.5
 
 
 ## What is it
@@ -21,10 +21,38 @@ This emulator work over [MKS CANable V1.0](https://github.com/makerbase-mks/CANa
 8) Use it! Press keyboard on comand for action on PC
 
 
+### Table alignment key COMAND - HID
 
+| COMAND CAN key | HID key D-pad mode (default)*| HID key numeric mode* | Long press function** |
+|----------------|:---------------------------:|:--------------------:|:-------------------:|
+| 0 | KEY_KP0    |  KEY_KP0  |
+| 1 | KEY_KP1    |  KEY_KP1  |
+| 2 | KEY_KP2    |  KEY_KP2  |
+| 3 | KEY_KP3    |  KEY_KP3  |
+| 4 | KEY_KP4    |  KEY_KP4  |
+| 5 | KEY_KP5    |  KEY_KP5  | toogle key mode |
+| 6 | KEY_KP6    |  KEY_KP6  |
+| 7 | KEY_KP7    |  KEY_KP7  |
+| 8 | KEY_KP8    |  KEY_KP8  |
+| 9 | KEY_KP9    |  KEY_KP9  |
+| * | KEY_KPASTERISK |  KEY_KPASTERISK  | open sound setting for TV |
+| # | KEY_KPDOT      |  KEY_KPDOT       |
+| Back     | KEY_LEFT  |  KEY_LEFT  |
+| Forward  | KEY_RIGHT |  KEY_RIGHT  |
+| Press encoder | KEY_KPSLASH |  KEY_KPSLASH  |
+| RET  | KEY_BACKSPACE |  KEY_BACKSPACE  |
+| Encoder + rotary  | KEY_UP |  KEY_UP  |
+| Encoder - rotary  | KEY_DOWN |  KEY_DOWN  |
+| Open TV mode***   | KEY_F1 |  KEY_F1  |
+| Close TV mode***  | KEY_F2 |  KEY_F2  |
+| On backgraund sound  | KEY_F1 |  KEY_F1  |
+| Mute  | KEY_F2 |  KEY_F2  |
+| UNMute (same key)  | KEY_F1 |  KEY_F1  |
+| Power off  | KEY_F5 |  KEY_F5  |
 
-
-
+*hex HID code see in Open TV COMAND/Core/Inc/main.h
+**Press and hold the button for more than 5 seconds
+***Pressing the TV button and any other
 
 
 
