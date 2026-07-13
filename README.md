@@ -45,7 +45,7 @@ This emulator work over [MKS CANable V1.0](https://github.com/makerbase-mks/CANa
 | Encoder - rotary  | KEY_DOWN |  KEY_DOWN  |
 | Open TV mode***   | KEY_F1 |  KEY_F1  |
 | Close TV mode***  | KEY_F2 |  KEY_F2  |
-| On backgraund sound  | KEY_F1 |  KEY_F1  |
+| On background sound  | KEY_F1 |  KEY_F1  |
 | Mute  | KEY_F2 |  KEY_F2  |
 | UNMute (same key)  | KEY_F1 |  KEY_F1  |
 | Power off  | KEY_F5 |  KEY_F5  |
