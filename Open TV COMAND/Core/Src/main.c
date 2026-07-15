@@ -51,6 +51,7 @@ uint8_t TxData[8] = { 0, };
 uint8_t RxData[8] = { 0, };
 uint32_t TxMailbox = 0;
 _Bool RxInput = 0;
+_Bool KeyMode = 0;
 unsigned char NumTx = 0;
 unsigned char NumPress = 0;
 
@@ -316,7 +317,7 @@ int main(void) {
 
 			if (RxHeader.DLC == 5 && RxData[1] == 0x30 && RxData[2] == 0x01) { // Key press
 
-				NumPress = NumPress + 1;
+				NumPress++;
 
 				if (RxData[3] == 0x40) { // 0 Key
 					keyboardhid.KEYCODE1 = KEY_KP0;
@@ -330,9 +331,19 @@ int main(void) {
 							sizeof(keyboardhid));
 				}
 				if (RxData[3] == 0x42) { // 2 Key
-					keyboardhid.KEYCODE1 = KEY_KP2;
-					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
-							sizeof(keyboardhid));
+
+					if (KeyMode == 0) {
+						keyboardhid.KEYCODE1 = KEY_UP;
+						USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+								sizeof(keyboardhid));
+					}
+
+					else {
+
+						keyboardhid.KEYCODE1 = KEY_KP2;
+						USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+								sizeof(keyboardhid));
+					}
 				}
 				if (RxData[3] == 0x43) { // 3 Key
 					keyboardhid.KEYCODE1 = KEY_KP3;
@@ -340,14 +351,37 @@ int main(void) {
 							sizeof(keyboardhid));
 				}
 				if (RxData[3] == 0x44) { // 4 Key
-					keyboardhid.KEYCODE1 = KEY_KP4;
-					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
-							sizeof(keyboardhid));
+
+					if (KeyMode == 0) {
+						keyboardhid.KEYCODE1 = KEY_LEFT;
+						USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+								sizeof(keyboardhid));
+					}
+
+					else {
+
+						keyboardhid.KEYCODE1 = KEY_KP4;
+						USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+								sizeof(keyboardhid));
+					}
 				}
 				if (RxData[3] == 0x45) { // 5 Key
-					keyboardhid.KEYCODE1 = KEY_KP5;
-					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
-							sizeof(keyboardhid));
+
+					if (NumPress == 40) {
+						KeyMode = !KeyMode;
+					}
+
+					if (KeyMode == 0) {
+						keyboardhid.KEYCODE1 = KEY_ENTER;
+						USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+								sizeof(keyboardhid));
+					}
+
+					else {
+						keyboardhid.KEYCODE1 = KEY_KP5;
+						USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+								sizeof(keyboardhid));
+					}
 				}
 				if (RxData[3] == 0x46) { // 6 Key
 					keyboardhid.KEYCODE1 = KEY_KP6;
@@ -360,9 +394,19 @@ int main(void) {
 							sizeof(keyboardhid));
 				}
 				if (RxData[3] == 0x48) { // 8 Key
-					keyboardhid.KEYCODE1 = KEY_KP8;
-					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
-							sizeof(keyboardhid));
+
+					if (KeyMode == 0) {
+						keyboardhid.KEYCODE1 = KEY_DOWN;
+						USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+								sizeof(keyboardhid));
+					}
+
+					else {
+
+						keyboardhid.KEYCODE1 = KEY_KP8;
+						USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+								sizeof(keyboardhid));
+					}
 				}
 				if (RxData[3] == 0x49) { // 9 Key
 					keyboardhid.KEYCODE1 = KEY_KP9;
@@ -376,7 +420,7 @@ int main(void) {
 						USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
 								sizeof(keyboardhid));
 					}
-					if (NumPress > 40) {
+					if (NumPress == 40) {
 						TxHeader.DLC = 4;   //Open sound settings
 						NumTx = NumTx + 0x01;
 						TxData[0] = (NumTx & 0x0F) + 0x10;
@@ -398,18 +442,18 @@ int main(void) {
 							sizeof(keyboardhid));
 				}
 				if (RxData[3] == 0x62) { // Back Key
-					keyboardhid.KEYCODE1 = KEY_LEFT;
+					keyboardhid.KEYCODE1 = KEY_B;
 					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
 							sizeof(keyboardhid));
 				}
 
 				if (RxData[3] == 0x63) { // Forward Key
-					keyboardhid.KEYCODE1 = KEY_RIGHT;
+					keyboardhid.KEYCODE1 = KEY_N;
 					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
 							sizeof(keyboardhid));
 				}
 				if (RxData[3] == 0x71) { // Press Encoder
-					keyboardhid.KEYCODE1 = KEY_KPSLASH;
+					keyboardhid.KEYCODE1 = KEY_ENTER;
 					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
 							sizeof(keyboardhid));
 
@@ -433,7 +477,7 @@ int main(void) {
 
 				if (RxData[2] == 0x01) { // + rotary
 
-					keyboardhid.KEYCODE1 = KEY_UP;
+					keyboardhid.KEYCODE1 = KEY_RIGHT;
 					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
 							sizeof(keyboardhid));
 					HAL_Delay(50);
@@ -443,7 +487,7 @@ int main(void) {
 
 				}
 				if (RxData[2] == 0x02) { // - rotary
-					keyboardhid.KEYCODE1 = KEY_DOWN;
+					keyboardhid.KEYCODE1 = KEY_LEFT;
 					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
 							sizeof(keyboardhid));
 					HAL_Delay(50);
@@ -496,7 +540,7 @@ int main(void) {
 			if (RxHeader.DLC == 3 && RxData[1] == 0x3A) { // State Mute button
 
 				if (RxData[2] == 0x00) { // UNMute
-					keyboardhid.KEYCODE1 = KEY_F3;
+					keyboardhid.KEYCODE1 = KEY_F1;
 					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
 							sizeof(keyboardhid));
 					HAL_Delay(50);
@@ -506,7 +550,7 @@ int main(void) {
 
 				}
 				if (RxData[2] == 0x01) { // Mute
-					keyboardhid.KEYCODE1 = KEY_F4;
+					keyboardhid.KEYCODE1 = KEY_F2;
 					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
 							sizeof(keyboardhid));
 					HAL_Delay(50);
