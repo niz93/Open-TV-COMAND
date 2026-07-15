@@ -27,13 +27,13 @@ This emulator work over [MKS CANable V1.0](https://github.com/makerbase-mks/CANa
 |----------------|:---------------------------:|:--------------------:|:-------------------:|
 | 0 | KEY_KP0    |  KEY_KP0  |
 | 1 | KEY_KP1    |  KEY_KP1  |
-| 2 | KEY_DOWN   |  KEY_KP2  |
+| 2 | KEY_UP     |  KEY_KP2  |
 | 3 | KEY_KP3    |  KEY_KP3  |
 | 4 | KEY_LEFT   |  KEY_KP4  |
 | 5 | KEY_ENTER  |  KEY_KP5  | toogle key mode |
 | 6 | KEY_RIGHT  |  KEY_KP6  |
 | 7 | KEY_KP7    |  KEY_KP7  |
-| 8 | KEY_UP     |  KEY_KP8  |
+| 8 | KEY_DOWN   |  KEY_KP8  |
 | 9 | KEY_KP9    |  KEY_KP9  |
 | * | KEY_KPASTERISK |  KEY_KPASTERISK  | open sound setting for TV |
 | # | KEY_KPDOT      |  KEY_KPDOT       |
