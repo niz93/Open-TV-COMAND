@@ -39,6 +39,8 @@ This emulator work over [MKS CANable V1.0](https://github.com/makerbase-mks/CANa
 | # | KEY_KPDOT      |  KEY_KPDOT       |
 | Back     | KEY_B |  KEY_B  |
 | Forward  | KEY_N |  KEY_N  |
+| Back Steering Wheel Key     | KEY_B |  KEY_B  |
+| Forward Steering Wheel Key  | KEY_N |  KEY_N  |
 | Press encoder | KEY_ENTER |  KEY_ENTER  |
 | RET  | KEY_BACKSPACE |  KEY_BACKSPACE  |
 | Encoder + rotary  | KEY_RIGHT |  KEY_RIGHT  |

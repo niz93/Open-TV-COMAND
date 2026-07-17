@@ -313,8 +313,18 @@ int main(void) {
 			}
 			/* TV tuner init END */
 
-			/* Comand to HID BEGIN */
+			/* COMAND to TV settings BEGIN */
+			if (RxHeader.DLC == 8 && RxData[1] == 0x24) { //COMAND to TV settings
+			//Search setting = RxData[2] //0x41 == Search on Freq, 0xC1 == Search on Memory
+			//Light interior = RxData[3] //0x00 == Light off, 0x0C-0x64 == Light on and dimming
+			//UNKNOW SETTING = RxData[4] //always == 0x40
+			//Key lock state = RxData[5] //0x00 ==  key is out lock,  0x01 == key insert, 0x03 == ACC, 0x0F == ignition, 0x17 == RUN,  0x17 == release RUN
+			//UNKNOW SETTING = RxData[6] //always == 0x00
+			//UNKNOW SETTING = RxData[7] //always == 0x00
+			}
 
+			/* COMAND to TV settings  END */
+			/* Comand to HID BEGIN */////////////////////////////////////////////////////////////////////////////////////////////////////////////
 			if (RxHeader.DLC == 5 && RxData[1] == 0x30 && RxData[2] == 0x01) { // Key press
 
 				NumPress++;
@@ -452,6 +462,19 @@ int main(void) {
 					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
 							sizeof(keyboardhid));
 				}
+
+				if (RxData[3] == 0x68) { // Forward Steering Wheel Key
+					keyboardhid.KEYCODE1 = KEY_N;
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
+				}
+
+				if (RxData[3] == 0x69) { // Back Steering Wheel Key
+					keyboardhid.KEYCODE1 = KEY_B;
+					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
+							sizeof(keyboardhid));
+				}
+
 				if (RxData[3] == 0x71) { // Press Encoder
 					keyboardhid.KEYCODE1 = KEY_ENTER;
 					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid,
@@ -573,7 +596,7 @@ int main(void) {
 
 			}
 
-			/* Comand to HID END */
+			/* Comand to HID END */ ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 			RxInput = 0;
 		}
 
