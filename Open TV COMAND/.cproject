@@ -227,4 +227,5 @@
 			<resource resourceType="PROJECT" workspacePath="/Open TV COMAND 2.0&amp;2.5"/>
 		</configuration>
 	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
 </cproject>
