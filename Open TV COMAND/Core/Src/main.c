@@ -187,7 +187,7 @@ int main(void) {
 				TxData[0] = 0x10;
 				TxData[1] = 0x15;
 				TxData[2] = 0x01;
-				TxData[3] = 0x01; //0x01 unknown difference
+				TxData[3] = 0x01; // or 0x00 unknown difference
 				TxData[4] = 0x02;
 				TxData[5] = 0x00;
 				TxData[6] = 0x00;
