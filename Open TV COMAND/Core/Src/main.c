@@ -54,6 +54,7 @@ _Bool RxInput = 0;
 _Bool KeyMode = 0;
 unsigned char NumTx = 0;
 unsigned char NumPress = 0;
+unsigned char TxDataOut = 0;
 
 /* USER CODE END PV */
 
@@ -262,40 +263,61 @@ int main(void) {
 				TxData[2] = 0x01;						//Purpose unknown (?)
 				TxData[3] = 0x01;						//Purpose unknown (?)
 				TxData[4] = 0x20;						//Purpose unknown (?)
-				TxData[5] = 0x00;						//SW TV tuner Version
-				TxData[6] = 0x20; 						//SW TV tuner Version
-				TxData[7] = 0x33;						//ASCII TV tuner Version
+				TxData[5] = 0x44;						//SW TV tuner Version
+				TxData[6] = 0x33; 						//SW TV tuner Version
+				TxData[7] = '1';						//ASCII TV tuner Version
 				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
 					;
 				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
 					HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
 				}
-
+				HAL_Delay(5);
 				TxHeader.DLC = 8;
 				NumTx = NumTx + 0x01;
 				TxData[0] = (NumTx & 0x0F) + 0x00;
-				TxData[1] = 0x39;						//ASCII TV tuner Version
-				TxData[2] = 0x30;						//ASCII TV tuner Version
-				TxData[3] = 0x30;						//ASCII TV tuner Version
-				TxData[4] = 0x00;						//ASCII TV tuner Version
-				TxData[5] = 0x56;						//ASCII TV tuner Version
-				TxData[6] = 0x49; 						//ASCII TV tuner Version
-				TxData[7] = 0x54;						//ASCII TV tuner Version
+				TxData[1] = '1';						//ASCII TV tuner Version
+				TxData[2] = '1';						//ASCII TV tuner Version
+				TxData[3] = '1';						//ASCII TV tuner Version
+				TxData[4] = '1';						//ASCII TV tuner Version
+				TxData[5] = '1'; 						//ASCII TV tuner Version
+				TxData[6] = '1';						//ASCII TV tuner Version
+				TxData[7] = '1';						//ASCII TV tuner Version
 				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
 					;
 				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
 					HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
 				}
 
-				TxHeader.DLC = 7;
+
+				HAL_Delay(5);
+				TxHeader.DLC = 8;
+				NumTx = NumTx + 0x01;
+				TxData[0] = (NumTx & 0x0F) + 0x00;
+				TxData[1] = 0x00;						//END ASCII TV tuner Version
+				TxData[2] = '2';						//ASCII TV tuner Version
+				TxData[3] = '2';						//ASCII TV tuner Version
+				TxData[4] = '2';						//ASCII TV tuner Version
+				TxData[5] = '2';						//ASCII TV tuner Version
+				TxData[6] = '2'; 						//ASCII TV tuner Version
+				TxData[7] = '2';						//ASCII TV tuner Version
+				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
+					;
+				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
+					HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
+				}
+
+
+				HAL_Delay(5);
+				TxHeader.DLC = 8;
 				NumTx = NumTx + 0x01;
 				TxData[0] = (NumTx & 0x0F) + 0x10;
-				TxData[1] = 0x00;						//ASCII TV tuner Version(?)
-				TxData[2] = 0x99;						//HW TV tuner Version
-				TxData[3] = 0x44;						//HW TV tuner Version
-				TxData[4] = 0x01;						//Purpose unknown (?)
-				TxData[5] = 0x08;						//Purpose unknown (?)
-				TxData[6] = 0x07; 						//Purpose unknown (?)
+				TxData[1] = '2';						//ASCII TV tuner Version
+				TxData[2] = '2';						//ASCII TV tuner Version
+				TxData[3] = '2';						//ASCII TV tuner Version
+				TxData[4] = '2';						//ASCII TV tuner Version
+				TxData[5] = 0x00;						//END ASCII TV tuner Version
+				TxData[6] = 0x22; 						//HW TV tuner Version
+				TxData[7] = 0x11;//HW TV tuner Version
 				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
 					;
 				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
@@ -326,7 +348,7 @@ int main(void) {
 			//==============================================================================================================================================
 			/* TV to COMAND to Cluster BEGIN */
 
-			if (RxHeader.DLC == 3 && RxData[1] == 0x2A) { //example trigger
+			if (RxHeader.DLC == 5 && RxData[1] == 0x30) { //example trigger
 
 				TxHeader.DLC = 8;
 				NumTx = NumTx + 0x01;
@@ -334,10 +356,10 @@ int main(void) {
 				TxData[1] = 0x47; 						//Sending ASCII TV tuner - COMAND - instrument cluster
 				TxData[2] = 0xFF;						//Number TV
 				TxData[3] = 0xFF;						//Purpose unknown (?)
-				TxData[4] = '1';						//1 ASCII TV tuner - COMAND - instrument cluster //Send 0x00 for END roll
-				TxData[5] = '2';						//2 ASCII TV tuner - COMAND - instrument cluster
-				TxData[6] = '3'; 						//3 ASCII TV tuner - COMAND - instrument cluster
-				TxData[7] = '4'; 						//4 ASCII TV tuner - COMAND - instrument cluster
+				TxData[4] = TxDataOut;					//1 ASCII TV tuner - COMAND - instrument cluster //Send 0x00 for END roll
+				TxData[5] = TxDataOut + 0x01;						//2 ASCII TV tuner - COMAND - instrument cluster
+				TxData[6] = TxDataOut + 0x02; 						//3 ASCII TV tuner - COMAND - instrument cluster
+				TxData[7] = TxDataOut + 0x03; 						//4 ASCII TV tuner - COMAND - instrument cluster
 				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
 					;
 				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
@@ -347,19 +369,21 @@ int main(void) {
 				TxHeader.DLC = 6;
 				NumTx = NumTx + 0x01;
 				TxData[0] = (NumTx & 0x0F) + 0x10;
-				TxData[1] = '5'; 						//5 ASCII TV tuner - COMAND - instrument cluster
-				TxData[2] = '6'; 						//6 ASCII TV tuner - COMAND - instrument cluster
-				TxData[3] = '7'; 						//7 ASCII TV tuner - COMAND - instrument cluster
-				TxData[4] = '8'; 						//8 ASCII TV tuner - COMAND - instrument cluster
-				TxData[5] = 0x00;                       //END ASCII TV tuner - COMAND - instrument cluster
+				TxData[1] = TxDataOut + 0x04; 						//5 ASCII TV tuner - COMAND - instrument cluster
+				TxData[2] = TxDataOut + 0x05; 						//6 ASCII TV tuner - COMAND - instrument cluster
+				TxData[3] = TxDataOut + 0x06; 						//7 ASCII TV tuner - COMAND - instrument cluster
+				TxData[4] = TxDataOut + 0x07; 						//8 ASCII TV tuner - COMAND - instrument cluster
+				TxData[5] = 0x00;                       			//END ASCII TV tuner - COMAND - instrument cluster
 				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
 					;
 				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
 					HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
 				}
+				TxDataOut++;
+
 			}
 
-			/* TV to COMAND to Cluster BEGIN */
+			/* TV to COMAND to Cluster END */
 			//==============================================================================================================================================
 			/* COMAND to HID BEGIN */
 
@@ -423,8 +447,16 @@ int main(void) {
 					}
 				}
 				if (RxData[3] == 0x46) { // 6 Key
-					keyboardhid.KEYCODE1 = KEY_KP6;
-					USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid, sizeof(keyboardhid));
+
+					if (KeyMode == 0) {
+						keyboardhid.KEYCODE1 = KEY_RIGHT;
+						USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid, sizeof(keyboardhid));
+					}
+
+					else {
+						keyboardhid.KEYCODE1 = KEY_KP6;
+						USBD_HID_SendReport(&hUsbDeviceFS, &keyboardhid, sizeof(keyboardhid));
+					}
 				}
 				if (RxData[3] == 0x47) { // 7 Key
 					keyboardhid.KEYCODE1 = KEY_KP7;
