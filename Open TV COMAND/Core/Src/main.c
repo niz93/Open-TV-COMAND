@@ -289,7 +289,6 @@ int main(void) {
 					NumTx++;
 				}
 
-
 				HAL_Delay(5);
 				TxHeader.DLC = 8;
 				TxData[0] = (NumTx & 0x0F) + 0x00;
@@ -307,7 +306,6 @@ int main(void) {
 					NumTx++;
 				}
 
-
 				HAL_Delay(5);
 				TxHeader.DLC = 8;
 				TxData[0] = (NumTx & 0x0F) + 0x10;
@@ -317,7 +315,7 @@ int main(void) {
 				TxData[4] = '2';						//ASCII TV tuner Version
 				TxData[5] = 0x00;						//END ASCII TV tuner Version
 				TxData[6] = 0x22; 						//HW TV tuner Version
-				TxData[7] = 0x11;//HW TV tuner Version
+				TxData[7] = 0x11; 						//HW TV tuner Version
 				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
 					;
 				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
@@ -346,6 +344,26 @@ int main(void) {
 			}
 
 			/* COMAND to TV settings  END */
+			//==============================================================================================================================================
+			/* COMAND to TV warnings BEGIN */
+
+			if (RxHeader.DLC == 3 && RxData[1] == 0x42) { //COMAND to TV settings
+
+			//Warnings = RxData[2]
+			//0x00 == Clear Warning
+			//0x01 == Low Voltage, disable after 3 minutes
+			//0x02 == Low Voltage, disable after 10 seconds
+			//0x03 == Low Voltage, disable right now
+			//0x04 == Turn the key, disable after 3 minutes
+			//0x05 == Turn the key, disable after 10 seconds
+			//0x06 == Turn the key, disable right now
+			//0x07 == NAVI, No navigation disk
+			//0x08 == NAVI, Voice output is muted
+			//0x09 == Commn, Process Active
+
+			}
+
+			/* COMAND to TV warnings  END */
 			//==============================================================================================================================================
 			/* TV to COMAND to Cluster BEGIN */
 
