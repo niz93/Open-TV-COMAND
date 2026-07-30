@@ -140,7 +140,7 @@ save, reboot
   
   
 
-4) You can instel external i2c eeprom an write EDID with EDID-DisplayID-Writer
+4) You can instal external i2c eeprom an write EDID with EDID-DisplayID-Writer
 
    <p align="center">
   <img src="https://github.com/niz93/Open-TV-COMAND/blob/main/pic/i2c_hdmi.jpg" alt="external i2c eeprom" width="70%" />
