@@ -117,8 +117,11 @@ For Raspberry Pi, you can multiply the frequency by pixels, [read more](https://
 
   
 `sudo mkdir -p /lib/firmware/edid`
+
 `cd /lib/firmware/edid`
+
 `sudo wget *link EDID file*`
+
 `sudo nano /boot/firmware/cmdline.txt`
   
 
