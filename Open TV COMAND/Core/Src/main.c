@@ -367,7 +367,7 @@ int main(void) {
 			//==============================================================================================================================================
 			/* TV to COMAND to Cluster BEGIN */
 
-			if (RxHeader.DLC == 5 && RxData[1] == 0x30) { //example trigger
+			/*if (RxHeader.DLC == 5 && RxData[1] == 0x30) { //example trigger
 
 				TxHeader.DLC = 8;
 				TxData[0] = (NumTx & 0x0F) + 0x00;
@@ -401,7 +401,7 @@ int main(void) {
 				TxDataOut++;
 
 			}
-
+*/
 			/* TV to COMAND to Cluster END */
 			//==============================================================================================================================================
 			/* COMAND to HID BEGIN */
