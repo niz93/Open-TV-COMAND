@@ -6,7 +6,7 @@ It is perfectly integrated into the COMAND 2 display for use via RGBs TV input
 
 
 <p align="center">
-  <img src="pic/CP_on_COMAND.jpg" width="70%" />
+  <img src="pic/CP_on_COMAND.jpg" alt="CP on COMAND" width="70%" />
 </p>
 
   
@@ -42,7 +42,7 @@ Another mix method will cause offset images on the display, they work, but you w
 VGA - COMAND scheme:
 
   <p align="center">
-  <img src="pic/hv-s.jpg" width="70%" />
+  <img src="pic/hv-s.jpg" alt="VGA - COMAND scheme" width="70%" />
 </p>
   
 
@@ -138,7 +138,7 @@ save, reboot
 4) You can instel external i2c eeprom an write EDID with EDID-DisplayID-Writer
 
    <p align="center">
-  <img src="pic/i2c_hdmi.jpg" width="70%" />
+  <img src="pic/i2c_hdmi.jpg" alt="external i2c eeprom" width="70%" />
 </p>
   
 
