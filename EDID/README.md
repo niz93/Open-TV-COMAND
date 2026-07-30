@@ -85,9 +85,13 @@ on some adapters it is possible to work without additional manipulations with th
 
 1) AG6200 - works well 230p and 460i without path
 
-2) MS9291/MS9292 - wokrs only with path
+2) MS9291/MS9292 - works only with path
 
-3) ... if you know the adapters that are working and not working with the patch, write to me.
+3) MX9291/MX9292 - works well 230p and 460i without path
+
+4) ICNM7301 - - works only with path
+
+5) ... if you know the adapters that are working and not working with the patch, write to me.
 
   
   
