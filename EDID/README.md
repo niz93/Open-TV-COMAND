@@ -2,7 +2,7 @@
 
   
 
-It is perfectly integrated into the COMAND 2 display for use via RGBs TV input
+It is perfectly adjusted pics for the COMAND 2 display for use via RGBs TV input
 
 
 <p align="center">
@@ -31,7 +31,7 @@ However, the 230p uses too low a pixel clock and not all video adapters can work
 
   
 
-Use ONLY AND logic for mixing H and V synk
+Use **ONLY** "AND" logic for mixing H and V synk
 
   
 
