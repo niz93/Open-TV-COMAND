@@ -96,7 +96,7 @@ on some adapters it is possible to work without additional manipulations with th
 
   
 
-For Raspberry Pi, you can multiply the frequency by pixels, read more https://github.com/f-io/LIVI/tree/main/assets/displays
+For Raspberry Pi, you can multiply the frequency by pixels, [read more](https://github.com/f-io/LIVI/tree/main/assets/displays "read more")
 
   
   
@@ -105,7 +105,7 @@ For Raspberry Pi, you can multiply the frequency by pixels, read more https://gi
 
   
 
-1) There is an EEPROM inside the adapter, but as a rule they are protected from overwriting, however, you can try using EDID-DisplayID-Writer https://www.monitortests.com/forum/Thread-EDID-DisplayID-Writer
+1) There is an EEPROM inside the adapter, but as a rule they are protected from overwriting, however, you can try using [EDID-DisplayID-Writer](https://www.monitortests.com/forum/Thread-EDID-DisplayID-Writer "EDID-DisplayID-Writer")
 
   
 
