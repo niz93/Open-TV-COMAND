@@ -1,7 +1,11 @@
 
 # Open TV for COMAND 2.0 or 2.5
 
-This emulator TV tuner for Mercedes (Bosch) COMAND 2.0 or 2.5
+This emulator TV tuner for Mercedes (Bosch) COMAND 2.0 or 2.5 for Carplay and AndroidAuto integration or other applications
+
+<p align="center">
+  <img src="https://github.com/niz93/Open-TV-COMAND/blob/main/pic/CP_on_COMAND.jpg" alt="CP on COMAND" width="70%" />
+</p>
 
 
 ## What is it
@@ -17,7 +21,7 @@ This emulator work over [MKS CANable V1.0](https://github.com/makerbase-mks/CANa
 5) Upgrade CANable 1.0
 4) Disconnect CANable 1.0 
 6) Remove BOOT jumper
-7) Connect CAN from Comand and plug USB in PC
+7) Connect CAN from COMAND (Connector C2, Pin 17, 18) and plug USB in PC
 8) Use it! Press keyboard on comand for action on PC
 
 
