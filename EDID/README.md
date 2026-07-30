@@ -120,7 +120,9 @@ For Raspberry Pi, you can multiply the frequency by pixels, [read more](https://
 
 `cd /lib/firmware/edid`
 
-`sudo wget *link EDID file*`
+`sudo wget https://github.com/niz93/Open-TV-COMAND/raw/refs/heads/main/EDID/Mercedes_COMAND2_LQ5AW136_320_230p_60Hz.bin`
+
+`sudo wget https://github.com/niz93/Open-TV-COMAND/raw/refs/heads/main/EDID/Mercedes_COMAND2_LQ5AW136_640_460i_30Hz.bin`
 
 `sudo nano /boot/firmware/cmdline.txt`
   
