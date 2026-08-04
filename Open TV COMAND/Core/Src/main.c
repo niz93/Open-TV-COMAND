@@ -222,7 +222,7 @@ int main(void) {
 				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
 					;
 				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
-					HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
+
 				}
 			}
 
