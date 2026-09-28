@@ -62,7 +62,26 @@ This emulator work over [MKS CANable V1.0](https://github.com/makerbase-mks/CANa
 
 ***Pressing the TV button and any other
 
+### ASCII text - USB CDC-ACM - COMAND - IC 
 
+If your dashboard supports the output of data from commands, you can output up to 8 characters of text, send from 0 to 8 characters without any additional characters, more than 8 characters will be discarded, the first 8 will be displayed
+
+<p align="center">
+  <img src="https://github.com/niz93/Open-TV-COMAND/blob/main/pic/ASCII-IC.jpg?raw=true" />
+</p>
+
+for LIVI there is a Python script for outputting the title playing track names with unicode to ASCII translation
+
+## Install script LIVI metadata - unicode - ASCII - serial
+
+```
+sudo apt install python3-unidecode
+sudo wget https://github.com/niz93/Open-TV-COMAND/raw/refs/heads/main/LIVI%20integration/LiviToSerial.py
+sudo chmod +x ~/LiviToSerial.py
+cd /etc/systemd/system/
+sudo wget https://github.com/niz93/Open-TV-COMAND/raw/refs/heads/main/LIVI%20integration/LiviToSerial.service
+sudo systemctl enable LiviToSerial.service
+```
 
 ## Support
 
