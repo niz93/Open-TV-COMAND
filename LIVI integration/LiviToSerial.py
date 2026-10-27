@@ -6,7 +6,7 @@ import time
 import termios
 import unidecode
 
-JSON_FILE = os.path.expanduser("~/.config/LIVI/mediaData.json")
+JSON_FILE = os.path.expanduser("~/.config/LIVI/state/media.json")
 SERIAL_PORT = "/dev/ttyACM0"
 
 BAUDRATE = 115200
