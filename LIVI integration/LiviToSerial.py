@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import json
 import os
 import time
@@ -8,35 +7,32 @@ import unidecode
 
 JSON_FILE = os.path.expanduser("~/.config/LIVI/state/media.json")
 SERIAL_PORT = "/dev/ttyACM0"
-
 BAUDRATE = 115200
 
+# SCROLL SETTINGS
+NUMBER_OF_CHARACTERS = 8              # Number of characters on the screen (threshold)
+SCROLL_SPEED = 0.2    # Shear rate (in seconds)
+PAUSE_START = 2.0   # Pause at the beginning of the track display (in seconds)
+
 def to_ascii(text: str) -> str:
-    """Транскодирует любые Unicode-символы в похожие ASCII-символы."""
-    if not text:
-        return ""
-    return unidecode.unidecode(text)
+    return unidecode.unidecode(text) if text else ""
 
 def configure_serial(fd):
+    # Correct configuration of the termios structure for the raw mode
     attrs = termios.tcgetattr(fd)
 
-    # raw-ish mode
-    attrs[0] = 0
-    attrs[1] = 0
+    # attrs[0] = iflag, attrs[1] = oflag, attrs[2] = cflag, attrs[3] = lflag
+    attrs[0] = 0  # Disabling input processing
+    attrs[1] = 0  # Disabling outnput processing
     attrs[2] = termios.CS8 | termios.CLOCAL | termios.CREAD
-    attrs[3] = 0
+    attrs[3] = 0  # Disabling canonical mode and echo
 
-    speed = {
-        9600: termios.B9600,
-        19200: termios.B19200,
-        38400: termios.B38400,
-        57600: termios.B57600,
-        115200: termios.B115200,
-    }[BAUDRATE]
+    # Настройка скорости
+    speed = {9600: termios.B9600, 115200: termios.B115200}[BAUDRATE]
+    attrs[4] = speed  # ispeed
+    attrs[5] = speed  # ospeed
 
-    attrs[4] = speed   # input speed
-    attrs[5] = speed   # output speed
-
+    # Non-blocking reading
     attrs[6][termios.VMIN] = 0
     attrs[6][termios.VTIME] = 0
 
@@ -45,43 +41,84 @@ def configure_serial(fd):
 def read_song_name():
     try:
         with open(JSON_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        return data["payload"]["media"]["MediaSongName"]
-
+            song = json.load(f)["payload"]["title"]
+            if not song or song.strip() == "-":
+                return "NO PLAY"
+            return song
     except (FileNotFoundError, json.JSONDecodeError, KeyError):
-
-        return None
+        return "NO PLAY"
 
 def main():
     print(f"Watching: {JSON_FILE}")
-    print(f"Serial:   {SERIAL_PORT} @ {BAUDRATE}")
+    print(f"Serial: {SERIAL_PORT} @ {BAUDRATE}")
 
-    fd = os.open(
-        SERIAL_PORT,
-        os.O_RDWR | os.O_NOCTTY
-    )
+    try:
+        fd = os.open(SERIAL_PORT, os.O_RDWR | os.O_NOCTTY)
+    except OSError as e:
+        print(f"Port opening error {SERIAL_PORT}: {e}")
+        return
 
     configure_serial(fd)
 
     previous_song = None
+    scroll_text = ""
+    max_steps = 0
+    current_step = 0
+
+    last_action_time = 0
+    state = "IDLE"
 
     try:
         while True:
+            current_time = time.time()
             song = read_song_name()
 
-            if song is not None and song != previous_song:
+            # 1. Detecting a track or status change
+            if song != previous_song:
                 ascii_song = to_ascii(song)
-
                 print(f"{song!r} -> {ascii_song!r}")
-
-                message = ascii_song.encode("ascii")
-                os.write(fd, message)
-
                 previous_song = song
+                current_step = 0
 
-            time.sleep(0.2)
+                if len(ascii_song) > NUMBER_OF_CHARACTERS:
+                    # Creating a looped string with spaces delimiters
+                    scroll_text = ascii_song + "        " + ascii_song
+                    max_steps = len(ascii_song) + 8
+                    state = "PAUSE"
+                    last_action_time = current_time + PAUSE_START
 
+                    # Sending the first N characters for the initial pauseы
+                    os.write(fd, scroll_text[:NUMBER_OF_CHARACTERS].encode("ascii"))
+                else:
+                    scroll_text = ascii_song
+                    max_steps = 0
+                    state = "IDLE"
+                    os.write(fd, scroll_text.encode("ascii"))
+
+            # 2. Processing the animation of a long track
+            elif state == "PAUSE":
+                if current_time >= last_action_time:
+                    state = "SCROLLING"
+                    last_action_time = current_time
+
+            elif state == "SCROLLING":
+                if current_time - last_action_time >= SCROLL_SPEED:
+                    current_step += 1
+
+                    frame = scroll_text[current_step : current_step + NUMBER_OF_CHARACTERS]
+                    os.write(fd, frame.encode("ascii"))
+
+                    last_action_time = current_time
+
+                    if current_step >= max_steps:
+                        state = "FINISHED"
+
+
+
+            time.sleep(0.05)
+
+    except KeyboardInterrupt:
+        print("\nThe script was stopped by the user.")
     finally:
         os.close(fd)
 
