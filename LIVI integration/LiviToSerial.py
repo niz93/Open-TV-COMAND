@@ -6,6 +6,7 @@ import termios
 import unidecode
 
 JSON_FILE = os.path.expanduser("~/.config/LIVI/state/media.json")
+OUTPUT_JSON_FILE = os.path.expanduser("~/.config/LIVI/state/cardata.json")
 SERIAL_PORT = "/dev/ttyACM0"
 BAUDRATE = 115200
 
@@ -23,11 +24,11 @@ def configure_serial(fd):
 
     # attrs[0] = iflag, attrs[1] = oflag, attrs[2] = cflag, attrs[3] = lflag
     attrs[0] = 0  # Disabling input processing
-    attrs[1] = 0  # Disabling outnput processing
+    attrs[1] = 0  # Disabling output processing
     attrs[2] = termios.CS8 | termios.CLOCAL | termios.CREAD
     attrs[3] = 0  # Disabling canonical mode and echo
 
-    # Настройка скорости
+    # Baudrate speed setup
     speed = {9600: termios.B9600, 115200: termios.B115200}[BAUDRATE]
     attrs[4] = speed  # ispeed
     attrs[5] = speed  # ospeed
@@ -50,7 +51,11 @@ def read_song_name():
 
 def main():
     print(f"Watching: {JSON_FILE}")
+    print(f"Writing incoming data to: {OUTPUT_JSON_FILE}")
     print(f"Serial: {SERIAL_PORT} @ {BAUDRATE}")
+
+    # Create directory for cardata.json if it does not exist yet
+    os.makedirs(os.path.dirname(OUTPUT_JSON_FILE), exist_ok=True)
 
     try:
         fd = os.open(SERIAL_PORT, os.O_RDWR | os.O_NOCTTY)
@@ -67,10 +72,54 @@ def main():
 
     last_action_time = 0
     state = "IDLE"
+    
+    input_buffer = b""
 
     try:
         while True:
             current_time = time.time()
+            
+            # --- Reading incoming data from SERIAL_PORT ---
+            try:
+                incoming_bytes = os.read(fd, 256)
+                if incoming_bytes:
+                    input_buffer += incoming_bytes
+                    
+                    # Split buffer by newline character
+                    while b"\n" in input_buffer or b"\r" in input_buffer:
+                        idx_n = input_buffer.find(b"\n")
+                        idx_r = input_buffer.find(b"\r")
+                        
+                        if idx_n != -1 and idx_r != -1:
+                            idx = min(idx_n, idx_r)
+                        else:
+                            idx = idx_n if idx_n != -1 else idx_r
+                        
+                        line_bytes = input_buffer[:idx]
+                        input_buffer = input_buffer[idx + 1:]
+                        
+                        raw_text = line_bytes.decode("ascii", errors="ignore")
+                        clean_text = raw_text.strip()
+                        
+                        if clean_text:
+                            # FIX: Check that the string starts with CAN data to prevent loopback echo
+                            if clean_text.startswith("RX ID"):
+                                print(f"Received from Serial: {clean_text!r}")
+                                
+                                with open(OUTPUT_JSON_FILE, "w", encoding="utf-8") as f:
+                                    json.dump({"serial_data": clean_text, "timestamp": current_time}, f, ensure_ascii=False, indent=4)
+                            else:
+                                # Process raw text echo strings if they contain a valid packet inside
+                                if "RX ID" in clean_text:
+                                    actual_data = clean_text[clean_text.find("RX ID"):]
+                                    print(f"Cleaned & Received: {actual_data!r}")
+                                    
+                                    with open(OUTPUT_JSON_FILE, "w", encoding="utf-8") as f:
+                                        json.dump({"serial_data": actual_data, "timestamp": current_time}, f, ensure_ascii=False, indent=4)
+            except OSError:
+                pass
+
+            # --- Display scrolling text animation logic ---
             song = read_song_name()
 
             # 1. Detecting a track or status change
@@ -87,7 +136,7 @@ def main():
                     state = "PAUSE"
                     last_action_time = current_time + PAUSE_START
 
-                    # Sending the first N characters for the initial pauseы
+                    # Sending the first N characters for the initial pause
                     os.write(fd, scroll_text[:NUMBER_OF_CHARACTERS].encode("ascii"))
                 else:
                     scroll_text = ascii_song
@@ -112,8 +161,6 @@ def main():
 
                     if current_step >= max_steps:
                         state = "FINISHED"
-
-
 
             time.sleep(0.05)
 
