@@ -62,7 +62,7 @@ This emulator work over [MKS CANable V1.0](https://github.com/makerbase-mks/CANa
 
 ***Pressing the TV button and any other
 
-### ASCII text - USB CDC-ACM - COMAND - IC 
+## ASCII text - USB CDC-ACM - COMAND - IC 
 
 If your dashboard supports the output of data from commands, you can output up to 8 characters of text, send from 0 to 8 characters without any additional characters, more than 8 characters will be discarded, the first 8 will be displayed
 
@@ -70,9 +70,20 @@ If your dashboard supports the output of data from commands, you can output up t
   <img src="https://github.com/niz93/Open-TV-COMAND/blob/main/pic/ASCII-IC.jpg?raw=true" />
 </p>
 
-for LIVI there is a Python script for outputting the title playing track names with unicode to ASCII translation
+### LiviToSerial
 
-## Install script LIVI metadata - unicode - ASCII - serial
+A lightweight Python script designed for Linux-based In-Vehicle Infotainment (**LIVI**) systems. It provides bidirectional communication via a serial port (`/dev/ttyACM0`) to synchronize media metadata with **COMAND** head units via CAN bus bridges) and log incoming diagnostic data.
+
+### Features
+
+- **Dynamic Text Scrolling**: Automatically scrolls track titles longer than 8 characters with a configurable initial pause and smooth scrolling speed.
+- **ASCII Transcoding**: Transliterates non-ASCII track metadata on the fly using `unidecode` for hardware compatibility.
+- **Hardware Echo & Loopback Filtering**: Robustly isolates transmitted text frames from incoming data frames (`RX ID`), preventing data corruption and mixed logging.
+- **Bidirectional Operation**: Logs real-time incoming data streams into a structured JSON file (`cardata.json`) for downstream system diagnostics.
+
+
+
+### Install script LIVI metadata - unicode - ASCII - serial
 
 ```
 sudo apt install python3-unidecode
