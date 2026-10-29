@@ -125,7 +125,7 @@ const uint8_t APBPrescTable[8]  = {0, 0, 0, 0, 1, 2, 3, 4};
   */
 void SystemInit(void)
 {
-  /* NOTE :SystemInit(): This function is called at startup just after reset and 
+  /* NOTE :SystemInit(): This function is called at startup just after reset and
                          before branch to main program. This call is made inside
                          the "startup_stm32f0xx.s" file.
                          User can setups the default system clock (System clock source, PLL Multiplier
@@ -246,4 +246,3 @@ void SystemCoreClockUpdate (void)
 /**
   * @}
   */
-

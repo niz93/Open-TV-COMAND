@@ -49,7 +49,7 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-char trans_str[128] = { 0, };
+char trans_str[256] = { 0, };
 
 /* USER CODE BEGIN PV */
 CAN_TxHeaderTypeDef TxHeader;
@@ -79,6 +79,97 @@ void MX_CAN_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 extern USBD_HandleTypeDef hUsbDevice;
+
+/* DFU BOOT support for STM32F072 */
+
+#define STM32_DFU_ADDRESS 0x1FFFC800UL
+
+/* Check incoming CDC command */
+static uint8_t DFU_IsBootCommand(const uint8_t *data, uint32_t length)
+{
+    const uint8_t command[] = "DFU_BOOT";
+    uint32_t i;
+
+    if ((data == NULL) ||
+        (length < sizeof(command) - 1U) ||
+        (length > sizeof(command) + 1U)) {
+        return 0U;
+    }
+
+    if (memcmp(data, command, sizeof(command) - 1U) != 0) {
+        return 0U;
+    }
+
+    for (i = sizeof(command) - 1U; i < length; ++i) {
+        if ((data[i] != '\r') && (data[i] != '\n')) {
+            return 0U;
+        }
+    }
+
+    return 1U;
+}
+
+/* Jump to STM32 system memory bootloader */
+__attribute__((naked, noreturn))
+static void DFU_BranchToROM(void)
+{
+    __asm volatile (
+        "ldr r0, =0x1FFFC800\n"
+        "ldr r1, [r0]\n"
+        "ldr r0, [r0, #4]\n"
+        "msr msp, r1\n"
+        "cpsie i\n"
+        "bx r0\n"
+    );
+}
+
+/* Prepare peripherals and jump to ROM DFU */
+static void DFU_EnterBootloader(void) __attribute__((noreturn));
+
+static void DFU_EnterBootloader(void)
+{
+    /* Disconnect USB from host */
+    (void)HAL_PCD_DevDisconnect(&hpcd_USB_FS);
+    HAL_Delay(100U);
+
+    /* Stop CAN */
+    (void)HAL_CAN_Stop(&hcan);
+    (void)HAL_CAN_DeInit(&hcan);
+
+    /* Deinitialize USB */
+    (void)HAL_PCD_DeInit(&hpcd_USB_FS);
+
+    /* Reset clock configuration */
+    (void)HAL_RCC_DeInit();
+    (void)HAL_DeInit();
+
+    /* Disable interrupts during handoff */
+    __disable_irq();
+
+    SysTick->CTRL = 0U;
+    SysTick->LOAD = 0U;
+    SysTick->VAL = 0U;
+
+    SCB->ICSR = SCB_ICSR_PENDSTCLR_Msk |
+                SCB_ICSR_PENDSVCLR_Msk;
+
+    NVIC->ICER[0] = 0xFFFFFFFFUL;
+    NVIC->ICPR[0] = 0xFFFFFFFFUL;
+
+    /* Remap system memory to address 0x00000000 */
+    __HAL_RCC_SYSCFG_CLK_ENABLE();
+    __HAL_SYSCFG_REMAPMEMORY_SYSTEMFLASH();
+
+    __DSB();
+    __ISB();
+
+    /* Enter built-in ROM bootloader */
+    DFU_BranchToROM();
+
+    for (;;) {}
+}
+
+/* END DFU BOOT support */
 
 typedef struct {
 	uint8_t MODIFIER;
@@ -167,6 +258,28 @@ int main(void) {
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
 	while (1) {
+		/* DFU_BOOT command via USB CDC-ACM */
+		if ((recvDone == 1U) &&
+		    DFU_IsBootCommand(RX_Buffer[0], recvLen))
+		{
+		    static uint8_t response[] = "DFU_BOOT_OK\r\n";
+
+		    /* Send acknowledgement */
+		    (void)CDC_Transmit(
+		        0,
+		        response,
+		        sizeof(response) - 1U
+		    );
+
+		    recvDone = 0U;
+
+		    /* Allow USB transmission to complete */
+		    HAL_Delay(100U);
+
+		    /* Jump to system DFU bootloader */
+		    DFU_EnterBootloader();
+		}
+		/* END DFU_BOOT command */
 
 		//==============================================================================================================================================
 		/* TV tuner emulator BEGIN */
@@ -220,14 +333,14 @@ int main(void) {
 
 		for (int i = 0; i < RxHeader.DLC; ++i) {
 			// Записываем каждый элемент в буфер со сдвигом
-			int written = snprintf(buf + offset, sizeof(buf) - offset, "%02lX ", RxData[i]);
+			int written = snprintf(buf + offset, sizeof(buf) - offset, "%02X ", RxData[i]);
 			if (written < 0 || offset + written >= sizeof(buf)) {
 				break; // Ошибка или переполнение буфера
 			}
 			offset += written;
 		}
 
-		snprintf(trans_str, 128, "RX ID %04lX HEX %s\n", RxHeader.StdId, buf);
+		snprintf(trans_str, sizeof(trans_str), "RX ID %04X HEX %s\n", (unsigned int)RxHeader.StdId, buf);
 		CDC_Transmit(0, (uint8_t*) trans_str, strlen(trans_str));
 		//==============================================================================================================================================
 		/* TV tuner init BEGIN */
@@ -629,7 +742,7 @@ int main(void) {
 
 			if (RxData[2] == 0x01) { // + rotary
 
-				keyboardhid.KEYCODE1 = KEY_RIGHT;
+				keyboardhid.KEYCODE1 = KEY_KPPLUS;
 				USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
 				HAL_Delay(50);
 				keyboardhid.KEYCODE1 = 0x00;
@@ -637,7 +750,7 @@ int main(void) {
 
 			}
 			if (RxData[2] == 0x02) { // - rotary
-				keyboardhid.KEYCODE1 = KEY_LEFT;
+				keyboardhid.KEYCODE1 = KEY_KPMINUS;
 				USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
 				HAL_Delay(50);
 				keyboardhid.KEYCODE1 = 0x00;
