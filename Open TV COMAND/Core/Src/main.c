@@ -63,9 +63,9 @@ unsigned char NumTx = 0;
 unsigned char NumPress = 0;
 
 extern uint8_t RX_Buffer[NUMBER_OF_CDC][APP_RX_DATA_SIZE];
-extern uint8_t recvDone;
-extern uint32_t recvLen;
-extern uint8_t TxCDCData[8];
+volatile uint8_t recvDone = 0;
+volatile uint16_t recvLen = 0;
+uint8_t TxCDCData[9] = { 0 };
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -85,88 +85,84 @@ extern USBD_HandleTypeDef hUsbDevice;
 #define STM32_DFU_ADDRESS 0x1FFFC800UL
 
 /* Check incoming CDC command */
-static uint8_t DFU_IsBootCommand(const uint8_t *data, uint32_t length)
-{
-    const uint8_t command[] = "DFU_BOOT";
-    uint32_t i;
+static uint8_t DFU_IsBootCommand(const uint8_t *data, uint32_t length) {
+	const uint8_t command[] = "DFU_BOOT";
+	uint32_t i;
 
-    if ((data == NULL) ||
-        (length < sizeof(command) - 1U) ||
-        (length > sizeof(command) + 1U)) {
-        return 0U;
-    }
+	if ((data == NULL) || (length < sizeof(command) - 1U) || (length > sizeof(command) + 1U)) {
+		return 0U;
+	}
 
-    if (memcmp(data, command, sizeof(command) - 1U) != 0) {
-        return 0U;
-    }
+	if (memcmp(data, command, sizeof(command) - 1U) != 0) {
+		return 0U;
+	}
 
-    for (i = sizeof(command) - 1U; i < length; ++i) {
-        if ((data[i] != '\r') && (data[i] != '\n')) {
-            return 0U;
-        }
-    }
+	for (i = sizeof(command) - 1U; i < length; ++i) {
+		if ((data[i] != '\r') && (data[i] != '\n')) {
+			return 0U;
+		}
+	}
 
-    return 1U;
+	return 1U;
 }
 
 /* Jump to STM32 system memory bootloader */
 __attribute__((naked, noreturn))
-static void DFU_BranchToROM(void)
-{
-    __asm volatile (
-        "ldr r0, =0x1FFFC800\n"
-        "ldr r1, [r0]\n"
-        "ldr r0, [r0, #4]\n"
-        "msr msp, r1\n"
-        "cpsie i\n"
-        "bx r0\n"
-    );
+static void DFU_BranchToROM(void) {
+	__asm volatile (
+			"ldr r0, =0x1FFFC800\n"
+			"ldr r1, [r0]\n"
+			"ldr r0, [r0, #4]\n"
+			"msr msp, r1\n"
+			"cpsie i\n"
+			"bx r0\n"
+	);
 }
 
 /* Prepare peripherals and jump to ROM DFU */
 static void DFU_EnterBootloader(void) __attribute__((noreturn));
 
-static void DFU_EnterBootloader(void)
-{
-    /* Disconnect USB from host */
-    (void)HAL_PCD_DevDisconnect(&hpcd_USB_FS);
-    HAL_Delay(100U);
+static void DFU_EnterBootloader(void) {
+	/* Disconnect USB from host */
+	(void) HAL_PCD_DevDisconnect(&hpcd_USB_FS);
+	HAL_Delay(100U);
 
-    /* Stop CAN */
-    (void)HAL_CAN_Stop(&hcan);
-    (void)HAL_CAN_DeInit(&hcan);
+	/* Stop CAN */
+	(void) HAL_CAN_Stop(&hcan);
+	(void) HAL_CAN_DeInit(&hcan);
 
-    /* Deinitialize USB */
-    (void)HAL_PCD_DeInit(&hpcd_USB_FS);
+	/* Deinitialize USB */
+	(void) HAL_PCD_DeInit(&hpcd_USB_FS);
 
-    /* Reset clock configuration */
-    (void)HAL_RCC_DeInit();
-    (void)HAL_DeInit();
+	/* Reset clock configuration */
+	(void) HAL_RCC_DeInit();
+	(void) HAL_DeInit();
 
-    /* Disable interrupts during handoff */
-    __disable_irq();
+	/* Disable interrupts during handoff */
+	__disable_irq();
 
-    SysTick->CTRL = 0U;
-    SysTick->LOAD = 0U;
-    SysTick->VAL = 0U;
+	SysTick->CTRL = 0U;
+	SysTick->LOAD = 0U;
+	SysTick->VAL = 0U;
 
-    SCB->ICSR = SCB_ICSR_PENDSTCLR_Msk |
-                SCB_ICSR_PENDSVCLR_Msk;
+	SCB->ICSR = SCB_ICSR_PENDSTCLR_Msk |
+	SCB_ICSR_PENDSVCLR_Msk;
 
-    NVIC->ICER[0] = 0xFFFFFFFFUL;
-    NVIC->ICPR[0] = 0xFFFFFFFFUL;
+	NVIC->ICER[0] = 0xFFFFFFFFUL;
+	NVIC->ICPR[0] = 0xFFFFFFFFUL;
 
-    /* Remap system memory to address 0x00000000 */
-    __HAL_RCC_SYSCFG_CLK_ENABLE();
-    __HAL_SYSCFG_REMAPMEMORY_SYSTEMFLASH();
+	/* Remap system memory to address 0x00000000 */
+	__HAL_RCC_SYSCFG_CLK_ENABLE();
+	__HAL_SYSCFG_REMAPMEMORY_SYSTEMFLASH();
 
-    __DSB();
-    __ISB();
+	__DSB();
+	__ISB();
 
-    /* Enter built-in ROM bootloader */
-    DFU_BranchToROM();
+	/* Enter built-in ROM bootloader */
+	DFU_BranchToROM();
 
-    for (;;) {}
+	for (;;) {
+	}
 }
 
 /* END DFU BOOT support */
@@ -259,25 +255,19 @@ int main(void) {
 	/* USER CODE BEGIN WHILE */
 	while (1) {
 		/* DFU_BOOT command via USB CDC-ACM */
-		if ((recvDone == 1U) &&
-		    DFU_IsBootCommand(RX_Buffer[0], recvLen))
-		{
-		    static uint8_t response[] = "DFU_BOOT_OK\r\n";
+		if ((recvDone == 1U) && DFU_IsBootCommand(RX_Buffer[0], recvLen)) {
+			static uint8_t response[] = "DFU_BOOT_OK\r\n";
 
-		    /* Send acknowledgement */
-		    (void)CDC_Transmit(
-		        0,
-		        response,
-		        sizeof(response) - 1U
-		    );
+			/* Send acknowledgement */
+			(void) CDC_Transmit(0, response, sizeof(response) - 1U);
 
-		    recvDone = 0U;
+			recvDone = 0U;
 
-		    /* Allow USB transmission to complete */
-		    HAL_Delay(100U);
+			/* Allow USB transmission to complete */
+			HAL_Delay(100U);
 
-		    /* Jump to system DFU bootloader */
-		    DFU_EnterBootloader();
+			/* Jump to system DFU bootloader */
+			DFU_EnterBootloader();
 		}
 		/* END DFU_BOOT command */
 
@@ -285,555 +275,585 @@ int main(void) {
 		/* TV tuner emulator BEGIN */
 
 		if (recvDone == 1) {
-			HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
+			// 1. Атомарный захват данных (Snapshot) под защитой отключения прерываний
+			__disable_irq();
+			uint16_t localLen = recvLen;
+			uint8_t localBuffer[9] = { 0 };
+			memcpy(localBuffer, TxCDCData, localLen);
+			recvDone = 0; // Теперь USB может принимать новую строку в фоне, пока мы заняты CAN
+			__enable_irq();
 
-			CDC_Transmit(0, (uint8_t*) RX_Buffer, recvLen);
 
-			TxCDCData[recvLen] = 0x00;
-			TxHeader.DLC = 8;
-			TxData[0] = (NumTx & 0x0F) + 0x00;
-			TxData[1] = 0x47; 						//Sending ASCII TV tuner - COMAND - instrument cluster
-			TxData[2] = 0xFF;						//Number TV
-			TxData[3] = 0xFF;						//Purpose unknown (?)
-			TxData[4] = TxCDCData[0];						//1 ASCII TV tuner - COMAND - instrument cluster //Send 0x00 for END roll
-			TxData[5] = TxCDCData[1];						//2 ASCII TV tuner - COMAND - instrument cluster
-			TxData[6] = TxCDCData[2]; 						//3 ASCII TV tuner - COMAND - instrument cluster
-			TxData[7] = TxCDCData[3]; 						//4 ASCII TV tuner - COMAND - instrument cluster
-			while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
-				;
+			// 3. Расчет общей длины полезных данных (текст + терминатор 0x00)
+			uint8_t dataTotalLen = localLen + 1;
+
+			// --- ФОРМИРОВАНИЕ И ОТПРАВКА ПЕРВОГО ПАКЕТА ---
+			// В первом пакете под текст доступно максимум 4 байта (после 4-х служебных)
+			uint8_t pack1TextLen = (dataTotalLen > 4) ? 4 : dataTotalLen;
+
+			uint8_t TxData[8] = { 0 }; // Чистый массив для CAN
+			TxHeader.DLC = 4 + pack1TextLen; // Динамический DLC
+			TxData[0] = (NumTx & 0x0F) + 0x00; // Порядковый номер пакета #1
+			TxData[1] = 0x47;                  //
+			TxData[2] = 0xFF;                  // Номер ТВ
+			TxData[3] = 0xFF;                  // Служебный байт
+
+			for (uint8_t i = 0; i < pack1TextLen; i++) {
+				if (i == localLen) {
+					TxData[4 + i] = 0x00; // Ставим признак конца, если текст завершился
+				} else {
+					TxData[4 + i] = localBuffer[i];
+				}
+			}
+
+			// Защита от зависания: отправка с жестким таймаутом в 10 мс
+			uint32_t timeout = HAL_GetTick() + 10;
+			while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0) {
+				if (HAL_GetTick() > timeout)
+					break;
+			}
 			if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
-				HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
 				NumTx++;
 			}
 
+			// --- ФОРМИРОВАНИЕ И ОТПРАВКА ВТОРОГО ПАКЕТА (только если текст > 3 символов) ---
+			if (dataTotalLen > 4) {
+				uint8_t pack2TextLen = dataTotalLen - 4; // Остаток байт (максимум 5)
 
+				memset(TxData, 0, 8); // Очищаем массив под второй фрейм
+				TxHeader.DLC = 1 + pack2TextLen; // 1 служебный байт + остаток полезной нагрузки
+				TxData[0] = (NumTx & 0x0F) + 0x10; // Порядковый номер пакета #2 (+0x10 для связанных кадров)
 
-			TxHeader.DLC = 6;
-			TxData[0] = (NumTx & 0x0F) + 0x10;
-			TxData[1] = TxCDCData[4]; 						//5 ASCII TV tuner - COMAND - instrument cluster
-			TxData[2] = TxCDCData[5]; 						//6 ASCII TV tuner - COMAND - instrument cluster
-			TxData[3] = TxCDCData[6]; 						//7 ASCII TV tuner - COMAND - instrument cluster
-			TxData[4] = TxCDCData[7]; 						//8 ASCII TV tuner - COMAND - instrument cluster
-			TxData[5] = 0x00;             					//END ASCII TV tuner - COMAND - instrument cluster
-			while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
-				;
-			if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
-				HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
-				NumTx++;
-			}
-			recvDone = 0;
-
-
-	}
-
-	if (RxInput == 1) {
-
-		char buf[128];
-		int offset = 0;
-
-		for (int i = 0; i < RxHeader.DLC; ++i) {
-			// Записываем каждый элемент в буфер со сдвигом
-			int written = snprintf(buf + offset, sizeof(buf) - offset, "%02X ", RxData[i]);
-			if (written < 0 || offset + written >= sizeof(buf)) {
-				break; // Ошибка или переполнение буфера
-			}
-			offset += written;
-		}
-
-		snprintf(trans_str, sizeof(trans_str), "RX ID %04X HEX %s\n", (unsigned int)RxHeader.StdId, buf);
-		CDC_Transmit(0, (uint8_t*) trans_str, strlen(trans_str));
-		//==============================================================================================================================================
-		/* TV tuner init BEGIN */
-
-		if (NumTx == 0) {
-
-			TxHeader.DLC = 6;                    //Purpose unknown (?)
-			TxData[0] = (NumTx & 0x0F) + 0x10;
-			TxData[1] = 0x15;
-			TxData[2] = 0x01;
-			TxData[3] = 0x01; // or 0x00 unknown difference
-			TxData[4] = 0x02;
-			TxData[5] = 0x02; // or 0x00 unknown difference
-			while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
-				;
-			if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
-				HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
-				NumTx++;
-			}
-		}
-
-		if (RxHeader.DLC == 3 && RxData[0] == 0xE0 && RxData[1] == 0x01 && RxData[2] == 0x00) { // Handshake
-
-			NumTx = 0;
-			TxHeader.DLC = 3;
-			TxData[0] = 0xE0;
-			TxData[1] = 0x01;
-			TxData[2] = 0x00;
-			while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
-				;
-			if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
-				HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
-			}
-
-		}
-
-		if (RxHeader.DLC == 2 && RxData[0] == 0xA3 && RxData[1] == 0x00) { //Ping - Pong
-
-			TxHeader.DLC = 2;
-			TxData[0] = 0xE1;
-			TxData[1] = 0x01;
-			while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
-				;
-			if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
-				HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
-			}
-
-		}
-
-		if (RxHeader.DLC > 1 && RxData[0] < 50) {  //ACK for all requests
-			TxHeader.DLC = 1;
-			TxData[0] = ((RxData[0] + 0x01) & 0x0F) + 0xB0;
-			while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
-				;
-			if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
-
-			}
-		}
-
-		if (RxHeader.DLC == 3 && RxData[1] == 0x00 && RxData[2] == 0x01) { //Purpose unknown (?)
-
-			TxHeader.DLC = 3;
-			TxData[0] = (NumTx & 0x0F) + 0x10;
-			TxData[1] = 0x01;
-			TxData[2] = 0x01;
-			while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
-				;
-			if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
-				HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
-				NumTx++;
-			}
-
-		}
-
-		if (RxHeader.DLC == 3 && RxData[1] == 0x26) { //Video status (?)
-
-			TxHeader.DLC = 4;
-			TxData[0] = (NumTx & 0x0F) + 0x10;
-			TxData[1] = 0x27;
-			TxData[2] = 0x02; 					// 0x01 = PAL 50 Hertz, 0x02 = NTSC 60 Hertz
-			TxData[3] = 0x01; 			// 0x00 = video off, 0x01 = video on (?)
-			while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
-				;
-			if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
-				HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
-				NumTx++;
-			}
-		}
-
-		/* TV tuner init END */
-		//==============================================================================================================================================
-		/* SW HW data BEGIN */
-
-		if (RxHeader.DLC == 2 && RxData[1] == 0x08) { //Request tuner SW HW data  (open the service menu - version - TV)
-
-			TxHeader.DLC = 8;
-			TxData[0] = (NumTx & 0x0F) + 0x00;
-			TxData[1] = 0x09;						//Purpose unknown (?)
-			TxData[2] = 0x01;						//Purpose unknown (?)
-			TxData[3] = 0x01;						//Purpose unknown (?)
-			TxData[4] = 0x20;						//Purpose unknown (?)
-			TxData[5] = 0x44;						//SW TV tuner Version
-			TxData[6] = 0x33; 						//SW TV tuner Version
-			TxData[7] = '1';						//ASCII TV tuner Version
-			while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
-				;
-			if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
-				HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
-				NumTx++;
-			}
-			HAL_Delay(5);
-			TxHeader.DLC = 8;
-			TxData[0] = (NumTx & 0x0F) + 0x00;
-			TxData[1] = '1';						//ASCII TV tuner Version
-			TxData[2] = '1';						//ASCII TV tuner Version
-			TxData[3] = '1';						//ASCII TV tuner Version
-			TxData[4] = '1';						//ASCII TV tuner Version
-			TxData[5] = '1'; 						//ASCII TV tuner Version
-			TxData[6] = '1';						//ASCII TV tuner Version
-			TxData[7] = '1';						//ASCII TV tuner Version
-			while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
-				;
-			if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
-				HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
-				NumTx++;
-			}
-
-			HAL_Delay(5);
-			TxHeader.DLC = 8;
-			TxData[0] = (NumTx & 0x0F) + 0x00;
-			TxData[1] = 0x00;						//END ASCII TV tuner Version
-			TxData[2] = '2';						//ASCII TV tuner Version
-			TxData[3] = '2';						//ASCII TV tuner Version
-			TxData[4] = '2';						//ASCII TV tuner Version
-			TxData[5] = '2';						//ASCII TV tuner Version
-			TxData[6] = '2'; 						//ASCII TV tuner Version
-			TxData[7] = '2';						//ASCII TV tuner Version
-			while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
-				;
-			if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
-				HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
-				NumTx++;
-			}
-
-			HAL_Delay(5);
-			TxHeader.DLC = 8;
-			TxData[0] = (NumTx & 0x0F) + 0x10;
-			TxData[1] = '2';						//ASCII TV tuner Version
-			TxData[2] = '2';						//ASCII TV tuner Version
-			TxData[3] = '2';						//ASCII TV tuner Version
-			TxData[4] = '2';						//ASCII TV tuner Version
-			TxData[5] = 0x00;						//END ASCII TV tuner Version
-			TxData[6] = 0x22; 						//HW TV tuner Version
-			TxData[7] = 0x11; 						//HW TV tuner Version
-			while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
-				;
-			if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
-				HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
-				NumTx++;
-			}
-
-		}
-		/* SW HW data END */
-		//==============================================================================================================================================
-		/* COMAND to TV settings BEGIN */
-
-		if (RxHeader.DLC == 8 && RxData[1] == 0x24) { //COMAND to TV settings
-
-		//Variable settings = RxData[2]  //0x0* == Search on Freq + miles			0x*0 == Deutsche  	0xFF == no data
-		//								 //0x4* == Search on Freq + kilometers		0x*1 == English
-		//						    	 //0x8* == Search on Memory + miles 		0x*2 == French
-		//								 //0xC* == Search on Memory + kilometers	0x*3 == Italian
-		//																			0x*4 ==	Spanish
-		//Light interior = RxData[3] //0x00 == Light off, 0x0C-0x64 == Light on and dimming 			0xFF == no data
-		//Light sensor	 = RxData[4] //0x00 == day, 0x40 == night										0xFF == no data
-		//Key lock state = RxData[5] //0x00 ==  key is out lock,  0x01 == key insert, 0x03 == ACC, 0x0F == ignition, 0x17 == RUN,  0x07 == release RUN 0xFF == no data
-		//UNKNOW SETTING = RxData[6] //always == 0x00 (speed?)											0xFF == no data
-		//UNKNOW SETTING = RxData[7] //always == 0x00 (speed?)											0xFF == no data
-
-		}
-
-		/* COMAND to TV settings  END */
-		//==============================================================================================================================================
-		/* COMAND to TV warnings BEGIN */
-
-		if (RxData[1] == 0x42) { //COMAND to TV warnings
-
-			//Warnings = RxData[2]
-			//0x00 == Clear Warning
-			//0x01 == Low Voltage, disable after 3 minutes
-			//0x02 == Low Voltage, disable after 10 seconds
-			//0x03 == Low Voltage, disable right now
-			//0x04 == Turn the key, disable after 3 minutes
-			//0x05 == Turn the key, disable after 10 seconds
-			//0x06 == Turn the key, disable right now
-			//0x07 == NAVI, No navigation disk
-			//0x08 == NAVI, Voice output is muted
-			//0x09 == Commn, Process Active
-
-		}
-
-		/* COMAND to TV warnings  END */
-		//==============================================================================================================================================
-		/* TV to COMAND to Cluster BEGIN */
-
-		if (RxData[1] == 0x46) {
-
-			TxHeader.DLC = 8;
-			TxData[0] = (NumTx & 0x0F) + 0x00;
-			TxData[1] = 0x47; 						//Sending ASCII TV tuner - COMAND - instrument cluster
-			TxData[2] = 0xFF;						//Number TV
-			TxData[3] = 0xFF;						//Purpose unknown (?)
-			TxData[4] = 'S';						//1 ASCII TV tuner - COMAND - instrument cluster //Send 0x00 for END roll
-			TxData[5] = 'M';						//2 ASCII TV tuner - COMAND - instrument cluster
-			TxData[6] = ' '; 						//3 ASCII TV tuner - COMAND - instrument cluster
-			TxData[7] = 'I'; 						//4 ASCII TV tuner - COMAND - instrument cluster
-			while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
-				;
-			if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
-				HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
-				NumTx++;
-			}
-
-			TxHeader.DLC = 6;
-			TxData[0] = (NumTx & 0x0F) + 0x10;
-			TxData[1] = 'n'; 						//5 ASCII TV tuner - COMAND - instrument cluster
-			TxData[2] = 't'; 						//6 ASCII TV tuner - COMAND - instrument cluster
-			TxData[3] = 'e'; 						//7 ASCII TV tuner - COMAND - instrument cluster
-			TxData[4] = 'g'; 						//8 ASCII TV tuner - COMAND - instrument cluster
-			TxData[5] = 0x00;             			//END ASCII TV tuner - COMAND - instrument cluster
-			while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
-				;
-			if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
-				HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
-				NumTx++;
-			}
-
-		}
-
-		/* TV to COMAND to Cluster END */
-		//==============================================================================================================================================
-		/* COMAND to HID BEGIN */
-
-		if (RxHeader.DLC == 5 && RxData[1] == 0x30 && RxData[2] == 0x01) { // Key press
-
-			NumPress++;
-
-			if (RxData[3] == 0x40) { // 0 Key
-				keyboardhid.KEYCODE1 = KEY_KP0;
-				USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-			}
-
-			if (RxData[3] == 0x41) { // 1 Key
-				keyboardhid.KEYCODE1 = KEY_KP1;
-				USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-			}
-			if (RxData[3] == 0x42) { // 2 Key
-
-				if (KeyMode == 0) {
-					keyboardhid.KEYCODE1 = KEY_UP;
-					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-				}
-
-				else {
-
-					keyboardhid.KEYCODE1 = KEY_KP2;
-					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-				}
-			}
-			if (RxData[3] == 0x43) { // 3 Key
-				keyboardhid.KEYCODE1 = KEY_KP3;
-				USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-			}
-			if (RxData[3] == 0x44) { // 4 Key
-
-				if (KeyMode == 0) {
-					keyboardhid.KEYCODE1 = KEY_LEFT;
-					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-				}
-
-				else {
-
-					keyboardhid.KEYCODE1 = KEY_KP4;
-					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-				}
-			}
-			if (RxData[3] == 0x45) { // 5 Key
-
-				if (NumPress == 40) {
-					KeyMode = !KeyMode;
-				}
-
-				if (KeyMode == 0) {
-					keyboardhid.KEYCODE1 = KEY_ENTER;
-					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-				}
-
-				else {
-					keyboardhid.KEYCODE1 = KEY_KP5;
-					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-				}
-			}
-			if (RxData[3] == 0x46) { // 6 Key
-
-				if (KeyMode == 0) {
-					keyboardhid.KEYCODE1 = KEY_RIGHT;
-					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-				}
-
-				else {
-					keyboardhid.KEYCODE1 = KEY_KP6;
-					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-				}
-			}
-			if (RxData[3] == 0x47) { // 7 Key
-				keyboardhid.KEYCODE1 = KEY_KP7;
-				USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-			}
-			if (RxData[3] == 0x48) { // 8 Key
-
-				if (KeyMode == 0) {
-					keyboardhid.KEYCODE1 = KEY_DOWN;
-					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-				}
-
-				else {
-
-					keyboardhid.KEYCODE1 = KEY_KP8;
-					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-				}
-			}
-			if (RxData[3] == 0x49) { // 9 Key
-				keyboardhid.KEYCODE1 = KEY_KP9;
-				USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-			}
-			if (RxData[3] == 0x50) { // * Key
-
-				if (NumPress == 1) {
-					keyboardhid.KEYCODE1 = KEY_KPASTERISK;
-					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-				}
-				if (NumPress == 40) {
-					TxHeader.DLC = 4;   //Open sound settings
-					TxData[0] = (NumTx & 0x0F) + 0x10;
-					TxData[1] = 0x2D;
-					TxData[2] = 0x01;
-					TxData[3] = 0x01;
-					while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
-						;
-					if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
-						HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
-						NumTx++;
+				for (uint8_t i = 0; i < pack2TextLen; i++) {
+					uint8_t textIndex = 4 + i;
+					if (textIndex == localLen) {
+						TxData[1 + i] = 0x00; // Конец строки
+					} else {
+						TxData[1 + i] = localBuffer[textIndex];
 					}
 				}
 
-			}
-			if (RxData[3] == 0x51) { // # Key
-				keyboardhid.KEYCODE1 = KEY_KPDOT;
-				USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-			}
-			if (RxData[3] == 0x62) { // Back Key
-				keyboardhid.KEYCODE1 = KEY_B;
-				USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-			}
-
-			if (RxData[3] == 0x63) { // Forward Key
-				keyboardhid.KEYCODE1 = KEY_N;
-				USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+				timeout = HAL_GetTick() + 10;
+				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0) {
+					if (HAL_GetTick() > timeout)
+						break;
+				}
+				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
+					NumTx++;
+				}
 			}
 
-			if (RxData[3] == 0x68) { // Forward Steering Wheel Key
-				keyboardhid.KEYCODE1 = KEY_N;
-				USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-			}
-
-			if (RxData[3] == 0x69) { // Back Steering Wheel Key
-				keyboardhid.KEYCODE1 = KEY_B;
-				USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-			}
-
-			if (RxData[3] == 0x71) { // Press Encoder
-				keyboardhid.KEYCODE1 = KEY_ENTER;
-				USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-
-			}
-
-			if (RxData[3] == 0x80) { // RET Key
-				keyboardhid.KEYCODE1 = KEY_BACKSPACE;
-				USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-			}
-
-		} else if (RxHeader.DLC == 5 && RxData[1] == 0x30 && RxData[2] == 0x02) { // Key release
-			NumPress = 0;
-			keyboardhid.KEYCODE1 = KEY_NONE;
-			USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+			HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1); // Конец передачи
 		}
 
-		if (RxHeader.DLC == 5 && RxData[1] == 0x34) { // Encoder rotary
+		if (RxInput == 1) {
 
-			if (RxData[2] == 0x01) { // + rotary
+			char buf[128];
+			int offset = 0;
 
-				keyboardhid.KEYCODE1 = KEY_KPPLUS;
+			for (int i = 0; i < RxHeader.DLC; ++i) {
+				// Записываем каждый элемент в буфер со сдвигом
+				int written = snprintf(buf + offset, sizeof(buf) - offset, "%02X ", RxData[i]);
+				if (written < 0 || offset + written >= sizeof(buf)) {
+					break; // Ошибка или переполнение буфера
+				}
+				offset += written;
+			}
+
+			snprintf(trans_str, sizeof(trans_str), "RX ID %04X HEX %s\r\n", (unsigned int) RxHeader.StdId, buf);
+			CDC_Transmit(0, (uint8_t*) trans_str, strlen(trans_str));
+			//==============================================================================================================================================
+			/* TV tuner init BEGIN */
+
+			if (NumTx == 0) {
+
+				TxHeader.DLC = 6;                    //Purpose unknown (?)
+				TxData[0] = (NumTx & 0x0F) + 0x10;
+				TxData[1] = 0x15;
+				TxData[2] = 0x01;
+				TxData[3] = 0x01; // or 0x00 unknown difference
+				TxData[4] = 0x02;
+				TxData[5] = 0x02; // or 0x00 unknown difference
+				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
+					;
+				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
+					HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
+					NumTx++;
+				}
+			}
+
+			if (RxHeader.DLC == 3 && RxData[0] == 0xE0 && RxData[1] == 0x01 && RxData[2] == 0x00) { // Handshake
+
+				NumTx = 0;
+				TxHeader.DLC = 3;
+				TxData[0] = 0xE0;
+				TxData[1] = 0x01;
+				TxData[2] = 0x00;
+				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
+					;
+				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
+					HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
+				}
+
+			}
+
+			if (RxHeader.DLC == 2 && RxData[0] == 0xA3 && RxData[1] == 0x00) { //Ping - Pong
+
+				TxHeader.DLC = 2;
+				TxData[0] = 0xE1;
+				TxData[1] = 0x01;
+				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
+					;
+				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
+					HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
+				}
+
+			}
+
+			if (RxHeader.DLC > 1 && RxData[0] < 50) {  //ACK for all requests
+				TxHeader.DLC = 1;
+				TxData[0] = ((RxData[0] + 0x01) & 0x0F) + 0xB0;
+				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
+					;
+				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
+
+				}
+			}
+
+			if (RxHeader.DLC == 3 && RxData[1] == 0x00 && RxData[2] == 0x01) { //Purpose unknown (?)
+
+				TxHeader.DLC = 3;
+				TxData[0] = (NumTx & 0x0F) + 0x10;
+				TxData[1] = 0x01;
+				TxData[2] = 0x01;
+				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
+					;
+				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
+					HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
+					NumTx++;
+				}
+
+			}
+
+			if (RxHeader.DLC == 3 && RxData[1] == 0x26) { //Video status (?)
+
+				TxHeader.DLC = 4;
+				TxData[0] = (NumTx & 0x0F) + 0x10;
+				TxData[1] = 0x27;
+				TxData[2] = 0x02; 					// 0x01 = PAL 50 Hertz, 0x02 = NTSC 60 Hertz
+				TxData[3] = 0x01; 			// 0x00 = video off, 0x01 = video on (?)
+				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
+					;
+				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
+					HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
+					NumTx++;
+				}
+			}
+
+			/* TV tuner init END */
+			//==============================================================================================================================================
+			/* SW HW data BEGIN */
+
+			if (RxHeader.DLC == 2 && RxData[1] == 0x08) { //Request tuner SW HW data  (open the service menu - version - TV)
+
+				TxHeader.DLC = 8;
+				TxData[0] = (NumTx & 0x0F) + 0x00;
+				TxData[1] = 0x09;						//Purpose unknown (?)
+				TxData[2] = 0x01;						//Purpose unknown (?)
+				TxData[3] = 0x01;						//Purpose unknown (?)
+				TxData[4] = 0x20;						//Purpose unknown (?)
+				TxData[5] = 0x44;						//SW TV tuner Version
+				TxData[6] = 0x33; 						//SW TV tuner Version
+				TxData[7] = '1';						//ASCII TV tuner Version
+				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
+					;
+				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
+					HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
+					NumTx++;
+				}
+				HAL_Delay(5);
+				TxHeader.DLC = 8;
+				TxData[0] = (NumTx & 0x0F) + 0x00;
+				TxData[1] = '1';						//ASCII TV tuner Version
+				TxData[2] = '1';						//ASCII TV tuner Version
+				TxData[3] = '1';						//ASCII TV tuner Version
+				TxData[4] = '1';						//ASCII TV tuner Version
+				TxData[5] = '1'; 						//ASCII TV tuner Version
+				TxData[6] = '1';						//ASCII TV tuner Version
+				TxData[7] = '1';						//ASCII TV tuner Version
+				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
+					;
+				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
+					HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
+					NumTx++;
+				}
+
+				HAL_Delay(5);
+				TxHeader.DLC = 8;
+				TxData[0] = (NumTx & 0x0F) + 0x00;
+				TxData[1] = 0x00;						//END ASCII TV tuner Version
+				TxData[2] = '2';						//ASCII TV tuner Version
+				TxData[3] = '2';						//ASCII TV tuner Version
+				TxData[4] = '2';						//ASCII TV tuner Version
+				TxData[5] = '2';						//ASCII TV tuner Version
+				TxData[6] = '2'; 						//ASCII TV tuner Version
+				TxData[7] = '2';						//ASCII TV tuner Version
+				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
+					;
+				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
+					HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
+					NumTx++;
+				}
+
+				HAL_Delay(5);
+				TxHeader.DLC = 8;
+				TxData[0] = (NumTx & 0x0F) + 0x10;
+				TxData[1] = '2';						//ASCII TV tuner Version
+				TxData[2] = '2';						//ASCII TV tuner Version
+				TxData[3] = '2';						//ASCII TV tuner Version
+				TxData[4] = '2';						//ASCII TV tuner Version
+				TxData[5] = 0x00;						//END ASCII TV tuner Version
+				TxData[6] = 0x22; 						//HW TV tuner Version
+				TxData[7] = 0x11; 						//HW TV tuner Version
+				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
+					;
+				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
+					HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
+					NumTx++;
+				}
+
+			}
+			/* SW HW data END */
+			//==============================================================================================================================================
+			/* COMAND to TV settings BEGIN */
+
+			if (RxHeader.DLC == 8 && RxData[1] == 0x24) { //COMAND to TV settings
+
+			//Variable settings = RxData[2]  //0x0* == Search on Freq + miles			0x*0 == Deutsche  	0xFF == no data
+			//								 //0x4* == Search on Freq + kilometers		0x*1 == English
+			//						    	 //0x8* == Search on Memory + miles 		0x*2 == French
+			//								 //0xC* == Search on Memory + kilometers	0x*3 == Italian
+			//																			0x*4 ==	Spanish
+			//Light interior = RxData[3] //0x00 == Light off, 0x0C-0x64 == Light on and dimming 			0xFF == no data
+			//Light sensor	 = RxData[4] //0x00 == day, 0x40 == night										0xFF == no data
+			//Key lock state = RxData[5] //0x00 ==  key is out lock,  0x01 == key insert, 0x03 == ACC, 0x0F == ignition, 0x17 == RUN,  0x07 == release RUN 0xFF == no data
+			//UNKNOW SETTING = RxData[6] //always == 0x00 (speed?)											0xFF == no data
+			//UNKNOW SETTING = RxData[7] //always == 0x00 (speed?)											0xFF == no data
+
+			}
+
+			/* COMAND to TV settings  END */
+			//==============================================================================================================================================
+			/* COMAND to TV warnings BEGIN */
+
+			if (RxData[1] == 0x42) { //COMAND to TV warnings
+
+				//Warnings = RxData[2]
+				//0x00 == Clear Warning
+				//0x01 == Low Voltage, disable after 3 minutes
+				//0x02 == Low Voltage, disable after 10 seconds
+				//0x03 == Low Voltage, disable right now
+				//0x04 == Turn the key, disable after 3 minutes
+				//0x05 == Turn the key, disable after 10 seconds
+				//0x06 == Turn the key, disable right now
+				//0x07 == NAVI, No navigation disk
+				//0x08 == NAVI, Voice output is muted
+				//0x09 == Commn, Process Active
+
+			}
+
+			/* COMAND to TV warnings  END */
+			//==============================================================================================================================================
+			/* TV to COMAND to Cluster BEGIN */
+
+			if (RxData[1] == 0x46) {
+
+				TxHeader.DLC = 8;
+				TxData[0] = (NumTx & 0x0F) + 0x00;
+				TxData[1] = 0x47; 						//Sending ASCII TV tuner - COMAND - instrument cluster
+				TxData[2] = 0xFF;						//Number TV
+				TxData[3] = 0xFF;						//Purpose unknown (?)
+				TxData[4] = 'S';						//1 ASCII TV tuner - COMAND - instrument cluster //Send 0x00 for END roll
+				TxData[5] = 'M';						//2 ASCII TV tuner - COMAND - instrument cluster
+				TxData[6] = ' '; 						//3 ASCII TV tuner - COMAND - instrument cluster
+				TxData[7] = 'I'; 						//4 ASCII TV tuner - COMAND - instrument cluster
+				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
+					;
+				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
+					HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
+					NumTx++;
+				}
+
+				TxHeader.DLC = 6;
+				TxData[0] = (NumTx & 0x0F) + 0x10;
+				TxData[1] = 'n'; 						//5 ASCII TV tuner - COMAND - instrument cluster
+				TxData[2] = 't'; 						//6 ASCII TV tuner - COMAND - instrument cluster
+				TxData[3] = 'e'; 						//7 ASCII TV tuner - COMAND - instrument cluster
+				TxData[4] = 'g'; 						//8 ASCII TV tuner - COMAND - instrument cluster
+				TxData[5] = 0x00;             			//END ASCII TV tuner - COMAND - instrument cluster
+				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
+					;
+				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
+					HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
+					NumTx++;
+				}
+
+			}
+
+			/* TV to COMAND to Cluster END */
+			//==============================================================================================================================================
+			/* COMAND to HID BEGIN */
+
+			if (RxHeader.DLC == 5 && RxData[1] == 0x30 && RxData[2] == 0x01) { // Key press
+
+				NumPress++;
+
+				if (RxData[3] == 0x40) { // 0 Key
+					keyboardhid.KEYCODE1 = KEY_KP0;
+					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+				}
+
+				if (RxData[3] == 0x41) { // 1 Key
+					keyboardhid.KEYCODE1 = KEY_KP1;
+					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+				}
+				if (RxData[3] == 0x42) { // 2 Key
+
+					if (KeyMode == 0) {
+						keyboardhid.KEYCODE1 = KEY_UP;
+						USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+					}
+
+					else {
+
+						keyboardhid.KEYCODE1 = KEY_KP2;
+						USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+					}
+				}
+				if (RxData[3] == 0x43) { // 3 Key
+					keyboardhid.KEYCODE1 = KEY_KP3;
+					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+				}
+				if (RxData[3] == 0x44) { // 4 Key
+
+					if (KeyMode == 0) {
+						keyboardhid.KEYCODE1 = KEY_LEFT;
+						USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+					}
+
+					else {
+
+						keyboardhid.KEYCODE1 = KEY_KP4;
+						USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+					}
+				}
+				if (RxData[3] == 0x45) { // 5 Key
+
+					if (NumPress == 40) {
+						KeyMode = !KeyMode;
+					}
+
+					if (KeyMode == 0) {
+						keyboardhid.KEYCODE1 = KEY_ENTER;
+						USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+					}
+
+					else {
+						keyboardhid.KEYCODE1 = KEY_KP5;
+						USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+					}
+				}
+				if (RxData[3] == 0x46) { // 6 Key
+
+					if (KeyMode == 0) {
+						keyboardhid.KEYCODE1 = KEY_RIGHT;
+						USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+					}
+
+					else {
+						keyboardhid.KEYCODE1 = KEY_KP6;
+						USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+					}
+				}
+				if (RxData[3] == 0x47) { // 7 Key
+					keyboardhid.KEYCODE1 = KEY_KP7;
+					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+				}
+				if (RxData[3] == 0x48) { // 8 Key
+
+					if (KeyMode == 0) {
+						keyboardhid.KEYCODE1 = KEY_DOWN;
+						USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+					}
+
+					else {
+
+						keyboardhid.KEYCODE1 = KEY_KP8;
+						USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+					}
+				}
+				if (RxData[3] == 0x49) { // 9 Key
+					keyboardhid.KEYCODE1 = KEY_KP9;
+					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+				}
+				if (RxData[3] == 0x50) { // * Key
+
+					if (NumPress == 1) {
+						keyboardhid.KEYCODE1 = KEY_KPASTERISK;
+						USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+					}
+					if (NumPress == 40) {
+						TxHeader.DLC = 4;   //Open sound settings
+						TxData[0] = (NumTx & 0x0F) + 0x10;
+						TxData[1] = 0x2D;
+						TxData[2] = 0x01;
+						TxData[3] = 0x01;
+						while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
+							;
+						if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
+							HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_1);
+							NumTx++;
+						}
+					}
+
+				}
+				if (RxData[3] == 0x51) { // # Key
+					keyboardhid.KEYCODE1 = KEY_KPDOT;
+					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+				}
+				if (RxData[3] == 0x62) { // Back Key
+					keyboardhid.KEYCODE1 = KEY_B;
+					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+				}
+
+				if (RxData[3] == 0x63) { // Forward Key
+					keyboardhid.KEYCODE1 = KEY_N;
+					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+				}
+
+				if (RxData[3] == 0x68) { // Forward Steering Wheel Key
+					keyboardhid.KEYCODE1 = KEY_N;
+					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+				}
+
+				if (RxData[3] == 0x69) { // Back Steering Wheel Key
+					keyboardhid.KEYCODE1 = KEY_B;
+					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+				}
+
+				if (RxData[3] == 0x71) { // Press Encoder
+					keyboardhid.KEYCODE1 = KEY_ENTER;
+					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+
+				}
+
+				if (RxData[3] == 0x80) { // RET Key
+					keyboardhid.KEYCODE1 = KEY_BACKSPACE;
+					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+				}
+
+			} else if (RxHeader.DLC == 5 && RxData[1] == 0x30 && RxData[2] == 0x02) { // Key release
+				NumPress = 0;
+				keyboardhid.KEYCODE1 = KEY_NONE;
+				USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+			}
+
+			if (RxHeader.DLC == 5 && RxData[1] == 0x34) { // Encoder rotary
+
+				if (RxData[2] == 0x01) { // + rotary
+
+					keyboardhid.KEYCODE1 = KEY_KPPLUS;
+					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+					HAL_Delay(50);
+					keyboardhid.KEYCODE1 = 0x00;
+					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+
+				}
+				if (RxData[2] == 0x02) { // - rotary
+					keyboardhid.KEYCODE1 = KEY_KPMINUS;
+					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+					HAL_Delay(50);
+					keyboardhid.KEYCODE1 = 0x00;
+					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+				}
+
+			}
+
+			if (RxHeader.DLC == 3 && RxData[1] == 0x2A) { // State TV mode
+
+				if (RxData[2] == 0x01) { // Open TV
+					keyboardhid.KEYCODE1 = KEY_F1;
+					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+					HAL_Delay(50);
+					keyboardhid.KEYCODE1 = 0x00;
+					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+
+				}
+				if (RxData[2] == 0x02) { // Close TV
+					keyboardhid.KEYCODE1 = KEY_F2;
+					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+					HAL_Delay(50);
+					keyboardhid.KEYCODE1 = 0x00;
+					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+				}
+
+			}
+
+			if (RxHeader.DLC == 3 && RxData[1] == 0x2C) { // State sound background TV mode
+
+				if (RxData[2] == 0x01) { // TV sound enable
+					keyboardhid.KEYCODE1 = KEY_F1;
+					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+					HAL_Delay(50);
+					keyboardhid.KEYCODE1 = 0x00;
+					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+
+				}
+
+			}
+
+			if (RxHeader.DLC == 3 && RxData[1] == 0x3A) { // State Mute button
+
+				if (RxData[2] == 0x00) { // UNMute
+					keyboardhid.KEYCODE1 = KEY_F1;
+					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+					HAL_Delay(50);
+					keyboardhid.KEYCODE1 = 0x00;
+					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+
+				}
+				if (RxData[2] == 0x01) { // Mute
+					keyboardhid.KEYCODE1 = KEY_F2;
+					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+					HAL_Delay(50);
+					keyboardhid.KEYCODE1 = 0x00;
+					USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
+				}
+
+			}
+
+			if (RxHeader.DLC == 3 && RxData[1] == 0x36 && RxData[2] == 0x02) { // COMAND Power off
+
+				keyboardhid.KEYCODE1 = KEY_F5;
 				USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
 				HAL_Delay(50);
 				keyboardhid.KEYCODE1 = 0x00;
 				USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
 
 			}
-			if (RxData[2] == 0x02) { // - rotary
-				keyboardhid.KEYCODE1 = KEY_KPMINUS;
-				USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-				HAL_Delay(50);
-				keyboardhid.KEYCODE1 = 0x00;
-				USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-			}
 
+			/* COMAND to HID END */
+			//==============================================================================================================================================
+			RxInput = 0;
 		}
 
-		if (RxHeader.DLC == 3 && RxData[1] == 0x2A) { // State TV mode
-
-			if (RxData[2] == 0x01) { // Open TV
-				keyboardhid.KEYCODE1 = KEY_F1;
-				USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-				HAL_Delay(50);
-				keyboardhid.KEYCODE1 = 0x00;
-				USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-
-			}
-			if (RxData[2] == 0x02) { // Close TV
-				keyboardhid.KEYCODE1 = KEY_F2;
-				USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-				HAL_Delay(50);
-				keyboardhid.KEYCODE1 = 0x00;
-				USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-			}
-
-		}
-
-		if (RxHeader.DLC == 3 && RxData[1] == 0x2C) { // State sound background TV mode
-
-			if (RxData[2] == 0x01) { // TV sound enable
-				keyboardhid.KEYCODE1 = KEY_F1;
-				USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-				HAL_Delay(50);
-				keyboardhid.KEYCODE1 = 0x00;
-				USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-
-			}
-
-		}
-
-		if (RxHeader.DLC == 3 && RxData[1] == 0x3A) { // State Mute button
-
-			if (RxData[2] == 0x00) { // UNMute
-				keyboardhid.KEYCODE1 = KEY_F1;
-				USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-				HAL_Delay(50);
-				keyboardhid.KEYCODE1 = 0x00;
-				USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-
-			}
-			if (RxData[2] == 0x01) { // Mute
-				keyboardhid.KEYCODE1 = KEY_F2;
-				USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-				HAL_Delay(50);
-				keyboardhid.KEYCODE1 = 0x00;
-				USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-			}
-
-		}
-
-		if (RxHeader.DLC == 3 && RxData[1] == 0x36 && RxData[2] == 0x02) { // COMAND Power off
-
-			keyboardhid.KEYCODE1 = KEY_F5;
-			USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-			HAL_Delay(50);
-			keyboardhid.KEYCODE1 = 0x00;
-			USBD_HID_Keyboard_SendReport(&hUsbDevice, (uint8_t*) &keyboardhid, sizeof(keyboardhid));
-
-		}
-
-		/* COMAND to HID END */
+		/* TV tuner emulator END */
 		//==============================================================================================================================================
-		RxInput = 0;
+		/* USER CODE END WHILE */
+
+		/* USER CODE BEGIN 3 */
 	}
-
-	/* TV tuner emulator END */
-	//==============================================================================================================================================
-	/* USER CODE END WHILE */
-
-	/* USER CODE BEGIN 3 */
-}
-/* USER CODE END 3 */
+	/* USER CODE END 3 */
 }
 
 /**
@@ -841,36 +861,36 @@ int main(void) {
  * @retval None
  */
 void SystemClock_Config(void) {
-RCC_OscInitTypeDef RCC_OscInitStruct = { 0 };
-RCC_ClkInitTypeDef RCC_ClkInitStruct = { 0 };
-RCC_PeriphCLKInitTypeDef PeriphClkInit = { 0 };
+	RCC_OscInitTypeDef RCC_OscInitStruct = { 0 };
+	RCC_ClkInitTypeDef RCC_ClkInitStruct = { 0 };
+	RCC_PeriphCLKInitTypeDef PeriphClkInit = { 0 };
 
-/** Initializes the RCC Oscillators according to the specified parameters
- * in the RCC_OscInitTypeDef structure.
- */
-RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI48;
-RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
-RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
-if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
-	Error_Handler();
-}
+	/** Initializes the RCC Oscillators according to the specified parameters
+	 * in the RCC_OscInitTypeDef structure.
+	 */
+	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI48;
+	RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
+	RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+		Error_Handler();
+	}
 
-/** Initializes the CPU, AHB and APB buses clocks
- */
-RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1;
-RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI48;
-RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+	/** Initializes the CPU, AHB and APB buses clocks
+	 */
+	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1;
+	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI48;
+	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
 
-if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK) {
-	Error_Handler();
-}
-PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB;
-PeriphClkInit.UsbClockSelection = RCC_USBCLKSOURCE_HSI48;
+	if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK) {
+		Error_Handler();
+	}
+	PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB;
+	PeriphClkInit.UsbClockSelection = RCC_USBCLKSOURCE_HSI48;
 
-if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK) {
-	Error_Handler();
-}
+	if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK) {
+		Error_Handler();
+	}
 }
 
 /* USER CODE BEGIN 4 */
@@ -882,12 +902,12 @@ if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK) {
  * @retval None
  */
 void Error_Handler(void) {
-/* USER CODE BEGIN Error_Handler_Debug */
-/* User can add his own implementation to report the HAL error return state */
-__disable_irq();
-while (1) {
-}
-/* USER CODE END Error_Handler_Debug */
+	/* USER CODE BEGIN Error_Handler_Debug */
+	/* User can add his own implementation to report the HAL error return state */
+	__disable_irq();
+	while (1) {
+	}
+	/* USER CODE END Error_Handler_Debug */
 }
 #ifdef USE_FULL_ASSERT
 /**

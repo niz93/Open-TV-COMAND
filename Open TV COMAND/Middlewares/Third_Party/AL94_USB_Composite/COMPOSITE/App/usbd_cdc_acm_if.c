@@ -21,7 +21,9 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "usbd_cdc_acm_if.h"
-
+extern volatile uint8_t recvDone;
+extern volatile uint16_t recvLen;
+extern uint8_t TxCDCData[9]; // Размер 9 байт: 8 байт текста + 1 для гарантированного 0x00
 /* USER CODE BEGIN INCLUDE */
 //#include "usart.h"
 //#include "tim.h"
@@ -92,9 +94,6 @@
 
 
 
-uint8_t recvDone = 0;
-uint32_t recvLen = 0;
-uint8_t TxCDCData[8] = { 0, };
 
 /** RX buffer for USB */
 uint8_t RX_Buffer[NUMBER_OF_CDC][APP_RX_DATA_SIZE];
@@ -424,17 +423,26 @@ static int8_t CDC_Control(uint8_t cdc_ch, uint8_t cmd, uint8_t *pbuf, uint16_t l
 static int8_t CDC_Receive(uint8_t cdc_ch, uint8_t *Buf, uint32_t *Len)
 {
   /* USER CODE BEGIN 6 */
-  //HAL_UART_Transmit_DMA(CDC_CH_To_UART_Handle(cdc_ch), Buf, *Len);
-  //CDC_Transmit(cdc_ch, Buf, *Len); // echo back on same channel
+  uint32_t length = *Len;
 
-  USBD_CDC_SetRxBuffer(cdc_ch, &hUsbDevice, &Buf[0]);
-  USBD_CDC_ReceivePacket(cdc_ch, &hUsbDevice);
-  recvDone = 1;
-  recvLen = *Len;
-
-  for (int i = 0; i < *Len; i++) {
-	  TxCDCData[i] = Buf[i];
+  // 1. Защита от переполнения (согласно ТЗ, текст от 0 до 8 байт)
+  if (length > 8) {
+      length = 8;
   }
+
+  // 2. Быстрое копирование памяти ДО возобновления приема по USB
+  if (length > 0) {
+      memcpy(TxCDCData, Buf, length);
+  }
+  TxCDCData[length] = 0x00; // Безопасный терминатор строки
+
+  // 3. Выставляем флаги для main.c
+  recvLen = (uint16_t)length;
+  recvDone = 1;
+
+  // 4. Мгновенно открываем USB Endpoint для следующего пакета с хоста
+  USBD_CDC_SetRxBuffer(cdc_ch, &hUsbDevice, Buf);
+  USBD_CDC_ReceivePacket(cdc_ch, &hUsbDevice);
 
   return (USBD_OK);
   /* USER CODE END 6 */
