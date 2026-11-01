@@ -254,8 +254,12 @@ int main(void) {
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
 	while (1) {
+		/* Read the flag once per pass: a line arriving between the two checks below
+		 * skipped the DFU_BOOT check and went out to the cluster as text. */
+		const uint8_t line = recvDone;
+
 		/* DFU_BOOT command via USB CDC-ACM */
-		if ((recvDone == 1U) && DFU_IsBootCommand(RX_Buffer[0], recvLen)) {
+		if ((line == 1U) && DFU_IsBootCommand(RX_Buffer[0], recvLen)) {
 			static uint8_t response[] = "DFU_BOOT_OK\r\n";
 
 			/* Send acknowledgement */
@@ -274,7 +278,7 @@ int main(void) {
 		//==============================================================================================================================================
 		/* TV tuner emulator BEGIN */
 
-		if (recvDone == 1) {
+		if (line == 1) {
 			// 1. Атомарный захват данных (Snapshot) под защитой отключения прерываний
 			__disable_irq();
 			uint16_t localLen = recvLen;
