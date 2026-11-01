@@ -119,7 +119,12 @@ static void DFU_BranchToROM(void) {
 	);
 }
 
-/* Prepare peripherals and jump to ROM DFU */
+/* Jumping to the ROM from the running application leaves USB dead until the board
+ * is re-plugged. Set a flag that survives a reset, reset the chip, and jump from the
+ * top of main() while every peripheral is still in its reset state. */
+#define DFU_MAGIC 0xDF00B007UL
+static volatile uint32_t dfuMagic __attribute__((section(".noinit")));
+
 static void DFU_EnterBootloader(void) __attribute__((noreturn));
 
 static void DFU_EnterBootloader(void) {
@@ -127,39 +132,8 @@ static void DFU_EnterBootloader(void) {
 	(void) HAL_PCD_DevDisconnect(&hpcd_USB_FS);
 	HAL_Delay(100U);
 
-	/* Stop CAN */
-	(void) HAL_CAN_Stop(&hcan);
-	(void) HAL_CAN_DeInit(&hcan);
-
-	/* Deinitialize USB */
-	(void) HAL_PCD_DeInit(&hpcd_USB_FS);
-
-	/* Reset clock configuration */
-	(void) HAL_RCC_DeInit();
-	(void) HAL_DeInit();
-
-	/* Disable interrupts during handoff */
-	__disable_irq();
-
-	SysTick->CTRL = 0U;
-	SysTick->LOAD = 0U;
-	SysTick->VAL = 0U;
-
-	SCB->ICSR = SCB_ICSR_PENDSTCLR_Msk |
-	SCB_ICSR_PENDSVCLR_Msk;
-
-	NVIC->ICER[0] = 0xFFFFFFFFUL;
-	NVIC->ICPR[0] = 0xFFFFFFFFUL;
-
-	/* Remap system memory to address 0x00000000 */
-	__HAL_RCC_SYSCFG_CLK_ENABLE();
-	__HAL_SYSCFG_REMAPMEMORY_SYSTEMFLASH();
-
-	__DSB();
-	__ISB();
-
-	/* Enter built-in ROM bootloader */
-	DFU_BranchToROM();
+	dfuMagic = DFU_MAGIC;
+	NVIC_SystemReset();
 
 	for (;;) {
 	}
@@ -205,6 +179,12 @@ void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan) {
 int main(void) {
 
 	/* USER CODE BEGIN 1 */
+	if (dfuMagic == DFU_MAGIC) { /* DFU_BOOT asked for the ROM bootloader before the reset */
+		dfuMagic = 0;
+		__HAL_RCC_SYSCFG_CLK_ENABLE();
+		__HAL_SYSCFG_REMAPMEMORY_SYSTEMFLASH();
+		DFU_BranchToROM();
+	}
 
 	/* USER CODE END 1 */
 
