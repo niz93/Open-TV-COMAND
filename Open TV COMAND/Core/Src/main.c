@@ -186,6 +186,11 @@ int main(void) {
 		DFU_BranchToROM();
 	}
 
+	/* dfu-util's "leave" jumps here from the ROM with system memory still mapped at 0,
+	 * so the interrupt vectors (no VTOR on the M0) would be the ROM's and USB never
+	 * comes up until a re-plug. Map our flash back first. */
+	__HAL_RCC_SYSCFG_CLK_ENABLE();
+	__HAL_SYSCFG_REMAPMEMORY_FLASH();
 	/* USER CODE END 1 */
 
 	/* MCU Configuration--------------------------------------------------------*/
