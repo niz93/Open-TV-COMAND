@@ -573,10 +573,10 @@ int main(void) {
 				TxData[1] = 0x47; 						//Sending ASCII TV tuner - COMAND - instrument cluster
 				TxData[2] = 0xFF;						//Number TV
 				TxData[3] = 0xFF;						//Purpose unknown (?)
-				TxData[4] = 'S';						//1 ASCII TV tuner - COMAND - instrument cluster //Send 0x00 for END roll
-				TxData[5] = 'M';						//2 ASCII TV tuner - COMAND - instrument cluster
-				TxData[6] = ' '; 						//3 ASCII TV tuner - COMAND - instrument cluster
-				TxData[7] = 'I'; 						//4 ASCII TV tuner - COMAND - instrument cluster
+				TxData[4] = 'L';						//1 ASCII TV tuner - COMAND - instrument cluster //Send 0x00 for END roll
+				TxData[5] = 'o';						//2 ASCII TV tuner - COMAND - instrument cluster
+				TxData[6] = 'a'; 						//3 ASCII TV tuner - COMAND - instrument cluster
+				TxData[7] = 'd'; 						//4 ASCII TV tuner - COMAND - instrument cluster
 				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
 					;
 				if (HAL_CAN_AddTxMessage(&hcan, &TxHeader, TxData, &TxMailbox) == HAL_OK) {
@@ -586,10 +586,10 @@ int main(void) {
 
 				TxHeader.DLC = 6;
 				TxData[0] = (NumTx & 0x0F) + 0x10;
-				TxData[1] = 'n'; 						//5 ASCII TV tuner - COMAND - instrument cluster
-				TxData[2] = 't'; 						//6 ASCII TV tuner - COMAND - instrument cluster
-				TxData[3] = 'e'; 						//7 ASCII TV tuner - COMAND - instrument cluster
-				TxData[4] = 'g'; 						//8 ASCII TV tuner - COMAND - instrument cluster
+				TxData[1] = 'i'; 						//5 ASCII TV tuner - COMAND - instrument cluster
+				TxData[2] = 'n'; 						//6 ASCII TV tuner - COMAND - instrument cluster
+				TxData[3] = 'g'; 						//7 ASCII TV tuner - COMAND - instrument cluster
+				TxData[4] = 0x00; 						//8 ASCII TV tuner - COMAND - instrument cluster
 				TxData[5] = 0x00;             			//END ASCII TV tuner - COMAND - instrument cluster
 				while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0)
 					;
