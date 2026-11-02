@@ -100,7 +100,7 @@ sudo systemctl enable LiviToSerial.service
 
 ## Switch to DFU from CDC-ACM STM32 
 
-The project includes switch to DFU bootloader from CDC-ACM STM32
+The project includes switch to DFU bootloader from CDC-ACM STM32 without manual hardware jumper switching.
 
 ### How to use switch to DFU STM32
 
