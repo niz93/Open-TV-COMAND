@@ -17,7 +17,7 @@ LIVI_TELEMETRY_URL = "http://localhost:4000/telemetry"
 
 # Text scrolling animation parameters
 NUMBER_OF_CHARACTERS = 8      # Visible display window width
-SCROLL_SPEED = 0.2            # Delay between text shifts (in seconds)
+SCROLL_SPEED = 0.5            # Delay between text shifts (in seconds)
 PAUSE_START = 2.0             # Initial freeze time before scrolling starts
 
 def to_ascii(text: str) -> str:
@@ -69,31 +69,76 @@ def send_to_livi(payload: dict):
 
 def parse_and_process_can(clean_text: str):
     """
-    Parses raw STM32 ACM string frames. 
-    Decodes ID 0x0264 (COMAND to TV settings) and maps data directly into LIVI Telemetry keys.
+    Parses raw STM32 ACM string frames and routes them to specific decoders.
     """
+    
+    # -------------------------------------------------------------------------
+    # 1. Decode ID 0x0484 (COMAND to NAVI settings)
+    # -------------------------------------------------------------------------
+    if "0484" in clean_text or "484" in clean_text:
+        # Match hexadecimal byte sequence following data markers
+        data_match = re.search(r'(?:DATA|Data):\s*([0-9a-fA-F ]+)', clean_text)
+        if data_match:
+            hex_values = data_match.group(1).split()
+        else:
+            # Fallback: extract only the bytes that follow the 'HEX' keyword
+            hex_part = clean_text.split("HEX")[-1]
+            hex_values = re.findall(r'\b[0-9a-fA-F]{2}\b', hex_part)
+
+        # Validate structured payload size requirement (XX E4 00 01/02 requires 4 bytes)
+        if len(hex_values) >= 4:
+            try:
+                # Safely slice to prevent IndexError on shorter frames
+                rx_data = [int(b, 16) for b in hex_values[:min(8, len(hex_values))]]
+                
+                # Check for COMAND verification signature: rx_data[1] == 0xE4 and rx_data[2] == 0x00
+                if rx_data[1] == 0xE4 and rx_data[2] == 0x00:
+                    print(f" -> Matches COMAND NAVI Settings! Data: {[hex(x) for x in rx_data]}")
+                    
+                    livi_payload = {}
+                    
+                    # rx_data[3]: Reverse Gear state mapping
+                    revers_gear = rx_data[3]
+                    if revers_gear != 0xFF:
+                        if revers_gear == 0x01:
+                            livi_payload["reverse"] = True
+                            livi_payload["gear"] = "R"
+                        elif revers_gear == 0x02:
+                            livi_payload["reverse"] = False
+                            livi_payload["gear"] = "D"
+                            
+                    if livi_payload:
+                        print(f" -> Sending to LIVI: {livi_payload}")
+                        send_to_livi(livi_payload)
+                        
+            except (ValueError, IndexError) as e:
+                print(f"Error processing CAN bytes for ID 484: {e}")
+
+    # -------------------------------------------------------------------------
+    # 2. Decode ID 0x0264 (COMAND to TV settings)
+    # -------------------------------------------------------------------------
     if "0464" in clean_text or "464" in clean_text:
         # Match hexadecimal byte sequence following data markers
         data_match = re.search(r'(?:DATA|Data):\s*([0-9a-fA-F ]+)', clean_text)
         if data_match:
             hex_values = data_match.group(1).split()
         else:
-            hex_values = re.findall(r'\b[0-9a-fA-F]{2}\b', clean_text)
-            if hex_values and (hex_values[0] == "64" or "264" in hex_values[0]):
-                hex_values = hex_values[1:]
+            # Fallback: extract only the bytes that follow the 'HEX' keyword
+            hex_part = clean_text.split("HEX")[-1]
+            hex_values = re.findall(r'\b[0-9a-fA-F]{2}\b', hex_part)
 
-        # Validate structured payload size requirement
+        # Validate structured payload size requirement (Full TV payload requires 8 bytes)
         if len(hex_values) >= 8:
             try:
                 rx_data = [int(b, 16) for b in hex_values[:8]]
                 
-                # Check for COMAND verification signature: DLC == 8 and RxData[1] == 0x24
+                # Check for COMAND verification signature: rx_data[1] == 0x24
                 if rx_data[1] == 0x24:
                     print(f" -> Matches COMAND TV Settings! Data: {[hex(x) for x in rx_data]}")
                     
                     livi_payload = {}
                     
-                    # RxData[3]: Interior illumination brightness mapping (Dimmer)
+                    # rx_data[3]: Interior illumination brightness mapping (Dimmer)
                     light_interior = rx_data[3]
                     if light_interior != 0xFF:
                         if light_interior == 0x00:
@@ -102,7 +147,7 @@ def parse_and_process_can(clean_text: str):
                             # 0x64 (Hex) matches exactly 100% (Dec)
                             livi_payload["dimmerPct"] = float(light_interior)
 
-                    # RxData[4]: Photocell Light Sensor mapping (Day/Night layout trigger)
+                    # rx_data[4]: Photocell Light Sensor mapping (Day/Night layout trigger)
                     light_sensor = rx_data[4]
                     if light_sensor != 0xFF:
                         if light_sensor == 0x00:
@@ -113,16 +158,14 @@ def parse_and_process_can(clean_text: str):
                             livi_payload["nightMode"] = True
                             livi_payload["darkMode"] = True
                             livi_payload["clusterNightMode"] = True
-
-                   
-
-                    # Transmit mapped parameters to LIVI state engine
+                            
                     if livi_payload:
                         print(f" -> Sending to LIVI: {livi_payload}")
                         send_to_livi(livi_payload)
                         
             except (ValueError, IndexError) as e:
-                print(f"Error processing CAN bytes: {e}")
+                print(f"Error processing CAN bytes for ID 464: {e}")
+
 
 def main():
     print(f"Watching: {JSON_FILE}")

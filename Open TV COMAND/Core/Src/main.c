@@ -26,8 +26,6 @@
 #include "usbd_cdc_acm.h"
 #include "usbd_cdc_acm_if.h"
 #include "usbd_hid_keyboard.h"
-#include "stdio.h"
-#include "string.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -66,6 +64,7 @@ extern uint8_t RX_Buffer[NUMBER_OF_CDC][APP_RX_DATA_SIZE];
 volatile uint8_t recvDone = 0;
 volatile uint16_t recvLen = 0;
 uint8_t TxCDCData[9] = { 0 };
+static const char hex_lut[] = "0123456789ABCDEF";
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -154,17 +153,69 @@ typedef struct {
 
 keyboardHID keyboardhid = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
+
+// Быстрая инлайн-функция для сборки и отправки пакета в CDC
+// Выполняется по месту вызова, не тратя время на полноценный вызов функции
+__STATIC_INLINE void CAN_To_CDC_FormatAndTransmit(uint16_t stdId, uint8_t dlc, const uint8_t *data) {
+    char tx_buf[45]; // Локальный буфер в стеке предотвращает race conditions между прерываниями
+
+    // Заполнение константного префикса "RX ID " и " HEX "
+    tx_buf[0] = 'R'; tx_buf[1] = 'X'; tx_buf[2] = ' ';
+    tx_buf[3] = 'I'; tx_buf[4] = 'D'; tx_buf[5] = ' ';
+    tx_buf[10] = ' '; tx_buf[11] = 'H'; tx_buf[12] = 'E'; tx_buf[13] = 'X'; tx_buf[14] = ' ';
+
+    // Преобразуем StdId в 4 символа HEX
+    tx_buf[6] = hex_lut[(stdId >> 12) & 0x0F];
+    tx_buf[7] = hex_lut[(stdId >> 8)  & 0x0F];
+    tx_buf[8] = hex_lut[(stdId >> 4)  & 0x0F];
+    tx_buf[9] = hex_lut[stdId         & 0x0F];
+
+    // Конвертация байт данных
+    int idx = 15;
+    for (uint32_t i = 0; i < dlc; i++) {
+        tx_buf[idx++] = hex_lut[(data[i] >> 4) & 0x0F];
+        tx_buf[idx++] = hex_lut[data[i] & 0x0F];
+        tx_buf[idx++] = ' ';
+    }
+
+    // Завершение строки в стиле Windows (CRLF)
+    tx_buf[idx++] = '\r';
+    tx_buf[idx++] = '\n';
+
+    // Прямая передача в USB CDC
+    CDC_Transmit(0, (uint8_t*)tx_buf, idx);
+}
+
+
+
+
+
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
 	if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader, RxData) == HAL_OK) {
+        HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_0);
+        RxInput = 1;
 
-		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_0);
-		RxInput = 1;
-		if (RxHeader.DLC == 1) {
-			NumTx = RxData[0];
-		}
+        if (RxHeader.DLC == 1) {
+            NumTx = RxData[0];
+        }
+
+        // Вызываем форматирование и сквозную отправку
+        CAN_To_CDC_FormatAndTransmit(RxHeader.StdId, RxHeader.DLC, RxData);
 	}
 
 }
+
+void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan) {
+    CAN_RxHeaderTypeDef fifo1RxHeader;
+    uint8_t fifo1RxData[8];
+
+    // Забираем пакет из изолированного FIFO 1
+    if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO1, &fifo1RxHeader, fifo1RxData) == HAL_OK) {
+        // Сразу отправляем транзитом без обработки внутренних счетчиков
+        CAN_To_CDC_FormatAndTransmit(fifo1RxHeader.StdId, fifo1RxHeader.DLC, fifo1RxData);
+    }
+}
+
 
 void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan) {
 
@@ -224,6 +275,7 @@ int main(void) {
 
 	HAL_CAN_Start(&hcan);
 	HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
+	HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO1_MSG_PENDING);
 
 	TxHeader.DLC = 3; // Power UP TX
 	TxData[0] = 0xE0;
@@ -336,21 +388,6 @@ int main(void) {
 		}
 
 		if (RxInput == 1) {
-
-			char buf[128];
-			int offset = 0;
-
-			for (int i = 0; i < RxHeader.DLC; ++i) {
-				// Записываем каждый элемент в буфер со сдвигом
-				int written = snprintf(buf + offset, sizeof(buf) - offset, "%02X ", RxData[i]);
-				if (written < 0 || offset + written >= sizeof(buf)) {
-					break; // Ошибка или переполнение буфера
-				}
-				offset += written;
-			}
-
-			snprintf(trans_str, sizeof(trans_str), "RX ID %04X HEX %s\r\n", (unsigned int) RxHeader.StdId, buf);
-			CDC_Transmit(0, (uint8_t*) trans_str, strlen(trans_str));
 			//==============================================================================================================================================
 			/* TV tuner init BEGIN */
 
