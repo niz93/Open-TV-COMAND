@@ -73,9 +73,9 @@ def parse_and_process_can(clean_text: str):
     """
     
     # -------------------------------------------------------------------------
-    # 1. Decode ID 0x0484 (COMAND to NAVI settings)
+    # 1. Decode ID 0x0448 (COMAND to NAVI settings)
     # -------------------------------------------------------------------------
-    if "0484" in clean_text or "484" in clean_text:
+    if "0448" in clean_text or "448" in clean_text:
         # Match hexadecimal byte sequence following data markers
         data_match = re.search(r'(?:DATA|Data):\s*([0-9a-fA-F ]+)', clean_text)
         if data_match:
@@ -101,11 +101,11 @@ def parse_and_process_can(clean_text: str):
                     revers_gear = rx_data[3]
                     if revers_gear != 0xFF:
                         if revers_gear == 0x01:
-                            livi_payload["reverse"] = True
-                            livi_payload["gear"] = "R"
-                        elif revers_gear == 0x02:
                             livi_payload["reverse"] = False
                             livi_payload["gear"] = "D"
+                        elif revers_gear == 0x02:
+                            livi_payload["reverse"] = True
+                            livi_payload["gear"] = "R"
                             
                     if livi_payload:
                         print(f" -> Sending to LIVI: {livi_payload}")
