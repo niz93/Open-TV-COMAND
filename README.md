@@ -130,7 +130,11 @@ chmod ./flash_stm32.sh
 
 ### How to Run DFU STM32 flash
 
-Download Open TV COMAND.bin in your "home/pi" directory from releases and run flash script:
+Download Open TV COMAND.bin in your "home/pi" directory from releases
+
+`sudo wget -O Open\ TV\ COMAND.bin https://github.com/niz93/Open-TV-COMAND/releases/latest/download/Open.TV.COMAND.over.CANable.bin`
+
+and run flash script:
 
 `./flash_stm32.sh`
 
