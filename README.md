@@ -120,9 +120,13 @@ The project includes an automated deployment script `flash_stm32.sh` to update t
 
 ### Prerequisites DFU STM32 flash
 Ensure `dfu-util` is installed on your host system:
-`sudo apt-get install dfu-util`
 
-Download and make executable flash_stm32.sh
+```
+sudo apt-get install dfu-util
+```
+
+Download and make executable `flash_stm32.sh`
+
 ```
 sudo wget https://raw.githubusercontent.com/niz93/Open-TV-COMAND/refs/heads/main/LIVI%20integration/flash_stm32.sh
 chmod ./flash_stm32.sh
@@ -132,11 +136,15 @@ chmod ./flash_stm32.sh
 
 Download Open TV COMAND.bin in your "home/pi" directory from releases
 
-`sudo wget -O Open\ TV\ COMAND.bin https://github.com/niz93/Open-TV-COMAND/releases/latest/download/Open.TV.COMAND.over.CANable.bin`
+```
+sudo wget -O Open\ TV\ COMAND.bin https://github.com/niz93/Open-TV-COMAND/releases/latest/download/Open.TV.COMAND.over.CANable.bin
+```
 
 and run flash script:
 
-`./flash_stm32.sh`
+```
+./flash_stm32.sh
+```
 
 
 ### Script Environment Configuration
