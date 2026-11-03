@@ -129,7 +129,7 @@ Download and make executable `flash_stm32.sh`
 
 ```
 sudo wget https://raw.githubusercontent.com/niz93/Open-TV-COMAND/refs/heads/main/LIVI%20integration/flash_stm32.sh
-chmod ./flash_stm32.sh
+sudo chmod +x  ./flash_stm32.sh
 ```
 
 ### How to Run DFU STM32 flash
