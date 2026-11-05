@@ -3,6 +3,8 @@
 
 This emulator TV tuner for Mercedes (Bosch) COMAND 2.0 or 2.5 for Carplay and AndroidAuto integration or other applications
 
+[Instructions for the youngest and most inexperienced. Integration of Carplay, Android Auto in COMAND 2.0 2.5.](https://github.com/niz93/Open-TV-COMAND/wiki/Instructions-for-the-youngest-and-most-inexperienced.-Integration-of-Carplay,-Android-Auto-in-COMAND-2.0-2.5.)
+
 <p align="center">
   <img src="https://github.com/niz93/Open-TV-COMAND/blob/main/pic/CP_on_COMAND.jpg" alt="CP on COMAND" width="70%" />
 </p>
