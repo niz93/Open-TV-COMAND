@@ -19,7 +19,7 @@ This emulator work over [MKS CANable V1.0](https://github.com/makerbase-mks/CANa
 
 1) Install the BOOT jumper on CANable 1.0 
 2) Open [DfuSeDemo ](https://www.st.com/en/development-tools/stsw-stm32080.html) (DFU USB device firmware upgrade)
-3) Select in "firmwire" folder .dfu file
+3) [Download Open.TV.COMAND.over.CANable.dfu file from latest releases](https://github.com/niz93/Open-TV-COMAND/releases/latest/download/Open.TV.COMAND.over.CANable.dfu)
 4) Connect CANable 1.0 via USB
 5) Upgrade CANable 1.0
 4) Disconnect CANable 1.0 
