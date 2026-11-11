@@ -1,7 +1,7 @@
 
 # Open TV for COMAND 2.0 or 2.5
 
-This emulator TV tuner for Mercedes (Bosch) COMAND 2.0 or 2.5 for Carplay and AndroidAuto integration or other applications
+This emulator TV tuner for Mercedes (Bosch) COMAND 2.0 or 2.5 for Carplay and AndroidAuto integration or other applications (So, it’s possible with VAG RNS‑D and RNS‑MFD.)
 
 [Instructions for the youngest and most inexperienced. Integration of Carplay, Android Auto in COMAND 2.0 2.5.](https://github.com/niz93/Open-TV-COMAND/wiki/Instructions-for-the-youngest-and-most-inexperienced.-Integration-of-Carplay,-Android-Auto-in-COMAND-2.0-2.5.)
 [Инструкция для самых маленьких и неопытных. Интеграция Carplay, Android Auto в COMAND 2.0/2.5.](https://www.drive2.ru/l/741129387188950679/)
